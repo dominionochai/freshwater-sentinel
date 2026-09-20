@@ -10,7 +10,10 @@ from app.water_quality import estimate_quality
 
 def test_water_mask_excludes_land_from_quality():
     shape = (4, 4)
-    bands = {name: np.full(shape, 0.1, dtype=float) for name in ("B02", "B03", "B04", "B08", "B11")}
+    bands = {
+        name: np.full(shape, 0.1, dtype=float)
+        for name in ("B02", "B03", "B04", "B05", "B08", "B11")
+    }
     bands["B03"][:2] = 0.20
     bands["B11"][:2] = 0.04
     bands["B08"][:2] = 0.12

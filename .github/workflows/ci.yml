@@ -13,5 +13,5 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: python -m compileall app scripts config.py
+      - run: python -m compileall app config.py vendor
       - run: pytest -q
