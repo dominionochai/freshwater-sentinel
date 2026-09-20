@@ -18,22 +18,22 @@ Backend-first prototype for the **OneAquaHealth IEEE Global Hackathon** (deadlin
 
 ```text
 Sentinel-2 scene / GeoTIFF / JSON bands
-                 |
-                 v
-       POST /ingest  ---> scene registry
-                 |
-                 v
+                |
+                v
+       POST /ingest ---> scene registry
+                |
+                v
        POST /analyze (optional HAB observations)
-                 |
-                 +--> water_masking.py  -- water-only pixels
-                 |          |
-                 +--> water_quality.py  -- turbidity + chlorophyll-a proxies
-                 |          |
-                 +--> hab_risk.py       -- activity risk + thresholds
-                 |          |
-                 +--> explain.py        -- human-readable evidence/uncertainty
-                 v
- GET /risk/{water_body_id}  ---> API-ready result for people and partners
+                |
+                +--> water_masking.py -- water-only pixels
+                |             |
+                |             +--> water_quality.py  -- turbidity + chlorophyll-a proxies
+                |             |
+                |             +--> hab_risk.py       -- activity risk + thresholds
+                |             |
+                |             +--> explain.py        -- human-readable evidence/uncertainty
+                v
+       GET /risk/{water_body_id} ---> API-ready result for people and partners
 ```
 
 ## Quickstart
@@ -66,7 +66,7 @@ curl http://127.0.0.1:8000/risk/demo-lagoon
 curl http://127.0.0.1:8000/health
 ```
 
-You can also send inline arrays through `scene.bands` (keys `B02`, `B03`, `B04`, `B08`, `B11`; `B12` is optional) instead of `scene_path`.
+You can also send inline arrays through `scene.bands` (keys `B02`, `B03`, `B04`, `B05`, `B08`, `B11`; `B12` is optional) instead of `scene_path`.
 
 ### 2. Docker
 
@@ -82,16 +82,27 @@ The API docs are available at `http://127.0.0.1:8000/docs`.
 - `/ingest` accepts one inline Sentinel-2-like scene or a local GeoTIFF path and returns a generated `scene_id`.
 - `/analyze` runs the full deterministic pipeline. `hab_observations` can contain optional field observations with severity 0-1.
 - `/risk/{water_body_id}` returns the latest analysis, including per-activity label and score, quality metrics, water-pixel count, evidence, and uncertainty.
-- `/health` reports service status and number of in-memory scenes/results. This scaffold deliberately uses an in-memory registry; production deployment should add object storage and a durable metadata store.
+- `/health` reports service status and the number of in-memory scenes/results. This scaffold deliberately uses an in-memory registry; production deployment should add object storage and a durable metadata store.
 
 ## Responsible-AI and scientific boundaries
 
-This is a screening aid, not a laboratory result, regulatory decision, or medical/safety guarantee. Cloud, atmospheric correction, adjacency effects, sensor differences, shallow bottoms, and mixed pixels can bias proxies. Thresholds are explicit in `config.py`, uncertainty is surfaced, and field/laboratory validation should precede public alerts. Human and community review remains part of the operating model.
+This is a screening aid, not a laboratory result, regulatory decision, or medical/safety guarantee. Clouds, atmospheric correction, adjacency effects, sensor differences, shallow bottoms, and mixed pixels can bias proxies. Thresholds are explicit in `config.py`, uncertainty is surfaced, and field/laboratory validation should precede public alerts. Human and community review remains part of the operating model.
+
+## Receipt
+
+- Original FastAPI pipeline: ingestion, water masking, water quality, HAB risk, explanations, and API endpoints.
+- `vendor/get-pak/methods.py`: original implementation of get-pak's published estimators, with MIT attribution to [get-pak](https://github.com/SNO-HYBAM/get-pak).
+- `app/water_masking.py`: original MNDWI/NDVI implementation, with algorithmic inspiration attributed to [WaterDetect](https://github.com/cordmaur/WaterDetect).
+- `vendor/README.md`: provenance notes, licensing scope, and atmospheric-correction/calibration caveats.
+- `vendor/get-pak/LICENSE`: retained get-pak MIT license text, which was already available locally in repository history.
+- WaterDetect license discrepancy note: repository metadata reports Apache-2.0 while its README states GPL-3.0; no WaterDetect code is vendored and this project does not resolve or change that upstream discrepancy.
+
+The One Health pitch and scientific caveats above remain the governing context: these estimators are transparent screening proxies, not copied upstream code or validated regulatory measurements.
 
 ## Development
 
 ```bash
-python -m compileall app scripts
+python -m compileall app scripts config.py vendor
 pytest -q
 ```
 

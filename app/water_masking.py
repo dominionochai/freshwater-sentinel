@@ -1,4 +1,10 @@
-"""Multispectral water detection with strict finite-value handling."""
+"""Multispectral water detection with strict finite-value handling.
+
+The original MNDWI/NDVI masking approach in this module is attributed to
+WaterDetect as algorithmic inspiration:
+https://github.com/cordmaur/WaterDetect.  No WaterDetect code is copied here;
+the implementation below remains the project's original implementation.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +23,7 @@ def _index(numerator: np.ndarray, denominator: np.ndarray) -> np.ndarray:
 
 
 def create_water_mask(bands: dict[str, np.ndarray]) -> tuple[np.ndarray, dict[str, float]]:
-    """Return a boolean open-water mask; downstream analysis must use this mask."""
+    """Return a boolean open-water mask; downstream analysis must use it."""
     missing = [band for band in REQUIRED_MASK_BANDS if band not in bands]
     if missing:
         raise ValueError(f"missing required water-mask bands: {', '.join(missing)}")
