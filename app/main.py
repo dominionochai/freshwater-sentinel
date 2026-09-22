@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from app import __version__
 from app.alerts import build_human_alert
 from app.community_data import load_community_profiles
+from app.earth_search import scene_from_stac_item_url
 from app.health_linkage import build_health_linkage
 from app.models import (
     AnalyzeRequest,
@@ -60,10 +61,16 @@ def ingest(request: IngestRequest) -> IngestResponse:
             scene = scene_from_payload(
                 request.water_body_id, request.scene, request.acquisition_date
             )
-        else:
-            assert request.scene_path is not None
+        elif request.scene_path is not None:
             scene = scene_from_geotiff(
                 request.water_body_id, request.scene_path, request.acquisition_date
+            )
+        else:
+            assert request.stac_item_url is not None
+            scene = scene_from_stac_item_url(
+                request.stac_item_url,
+                water_body_id=request.water_body_id,
+                requested_date=request.acquisition_date,
             )
     except (AssertionError, FileNotFoundError, OSError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -74,6 +81,7 @@ def ingest(request: IngestRequest) -> IngestResponse:
         water_body_id=scene.water_body_id,
         source=scene.source,
         acquisition_date=scene.acquisition_date,
+        metadata=scene.metadata,
     )
 
 
