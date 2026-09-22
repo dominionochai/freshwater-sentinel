@@ -1,4 +1,4 @@
-"""Typed, offline registry loading for WPdx-style water point rows."""
+"""Typed, offline registry loading for WPDx-style water point rows."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TypeAlias
-
 
 MeasurementValue: TypeAlias = float | str | None
 
@@ -45,7 +44,6 @@ DEMO_SEED_RECORDS: tuple[WaterPoint, ...] = (
     ),
 )
 
-
 _ID_ALIASES = {
     "id",
     "waterpoint_id",
@@ -66,10 +64,11 @@ _SOURCE_TYPE_ALIASES = {
     "source",
 }
 _CORE_COLUMNS = _ID_ALIASES | _LAT_ALIASES | _LON_ALIASES | _STATUS_ALIASES | _SOURCE_TYPE_ALIASES
+DEFAULT_REGISTRY_CSV = Path(__file__).resolve().parents[1] / "data" / "wpdx_malawi.csv"
 
 
 def _header(value: str) -> str:
-    """Normalise WPdx and checked-in extract headers to stable snake case."""
+    """Normalise WPDx and checked-in extract headers to stable snake case."""
 
     return "_".join("".join(character if character.isalnum() else "_" for character in value.strip().lower()).split("_"))
 
@@ -127,18 +126,18 @@ def _load_csv(path: Path) -> list[WaterPoint]:
 
 
 def load_registry(csv_path: str | Path | None = None) -> list[WaterPoint]:
-    """Load a configured local CSV, or return explicitly labelled offline demo seeds.
+    """Load a configured local CSV, defaulting to the generated Malawi WPDx slice.
 
-    ``csv_path`` takes precedence over ``WATER_POINT_REGISTRY_CSV``.  This loader
-    performs no network access.  Missing coordinates remain ``None`` and missing
-    measurement cells remain ``None`` rather than being fabricated.
+    ``csv_path`` takes precedence over ``WATER_POINT_REGISTRY_CSV``. With neither
+    supplied, the committed ``data/wpdx_malawi.csv`` is preferred. Missing explicit,
+    environment, or default files fall back to the small, explicitly labelled demo
+    seed records. This loader performs no network access.
     """
 
     configured = csv_path if csv_path is not None else os.getenv("WATER_POINT_REGISTRY_CSV")
-    if configured:
-        path = Path(configured).expanduser()
-        if path.is_file():
-            return _load_csv(path)
+    path = Path(configured).expanduser() if configured is not None else DEFAULT_REGISTRY_CSV
+    if path.is_file():
+        return _load_csv(path)
     return list(DEMO_SEED_RECORDS)
 
 
