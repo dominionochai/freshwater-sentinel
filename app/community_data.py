@@ -13,12 +13,39 @@ _PROFILE_PATH = Path(__file__).resolve().parents[1] / "data" / "community_profil
 
 
 def load_community_profiles() -> list[dict[str, Any]]:
-    """Return the checked-in community profile seed records."""
+    """Return checked-in community profile seed records with a canonical name."""
     with _PROFILE_PATH.open(encoding="utf-8") as profile_file:
         profiles = json.load(profile_file)
     if not isinstance(profiles, list):
         raise ValueError("community profile seed data must be a list")
-    return profiles
+
+    normalized: list[dict[str, Any]] = []
+    for index, record in enumerate(profiles):
+        if not isinstance(record, dict):
+            raise ValueError(f"community profile at index {index} must be an object")
+
+        profile = dict(record)
+        names = profile.get("names", [])
+        if isinstance(names, str):
+            names = [names]
+        if not isinstance(names, list) or not all(isinstance(value, str) for value in names):
+            raise ValueError(f"community profile at index {index} has invalid names")
+        names = [value.strip() for value in names if value.strip()]
+
+        candidates = [profile.get("name"), *names, profile.get("community")]
+        canonical_name = next(
+            (value.strip() for value in candidates if isinstance(value, str) and value.strip()),
+            None,
+        )
+        if canonical_name is None:
+            raise ValueError(f"community profile at index {index} must have a meaningful name")
+
+        profile["name"] = canonical_name
+        # Keep the legacy display-name collection available to existing clients.
+        profile["names"] = names or [canonical_name]
+        normalized.append(profile)
+
+    return normalized
 
 
 def _demo_profile() -> CommunityProfile:
