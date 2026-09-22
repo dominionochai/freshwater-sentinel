@@ -1,0 +1,39 @@
+{
+  "mndwi_mean": 0.689133,
+  "water_coverage": 1.0,
+  "pixels_analyzed": 4096,
+  "turbidity_median_ntu": 69.2857,
+  "turbidity_p90_ntu": 69.88,
+  "turbidity_signal": 1.0,
+  "chlorophyll_a_median_ug_l": 60.4545,
+  "chlorophyll_a_p90_ug_l": 61.7241,
+  "chlorophyll_signal": 1.0,
+  "ndci_mean": 0.30131,
+   "ndci_chlorophyll_a_ug_l": 66.5,
+  "observation_signal": 0.0,
+  "risks": {
+    "swimming": {"score": 1.0, "severity": "red"},
+    "fishing": {"score": 0.7, "severity": "yellow"},
+    "pets": {"score": 0.8, "severity": "red"}
+  },
+  "uncertainty": 0.125,
+  "explanation": {
+    "summary": "High harmful-algal-bloom screening signal for Demo Lake community.",
+    "band_signals": [
+      {"band": "B02", "signal": "blue water-color response"},
+      {"band": "B03", "signal": "green water-color response"},
+      {"band": "B04", "signal": "red bloom response"},
+      {"band": "B05", "signal": "red-edge pike"}
+    ],
+    "limitations": [
+      "reflectance proxies not lab measurements",
+      "clouds/shallow bottom/mixed pixels can bias",
+      "thresholds need field validation"
+    ]
+  },
+  "alerts": {
+    "en": {
+      "severity": "red",
+      "community": "Demo Lake community",
+      "title": "Water watch: high concern",
+      "message": "A high harmful-algal-bloom screening signal was detected for Demo Lake community. Do not swim, dri 
