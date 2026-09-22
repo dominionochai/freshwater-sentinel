@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException
 
 from app import __version__
 from app.alerts import build_human_alert
+from app.community_data import load_community_profiles
 from app.models import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -36,6 +37,12 @@ def health() -> HealthResponse:
         results_available=len(LATEST_BY_WATER_BODY),
         version=__version__,
     )
+
+
+@app.get("/community-profiles")
+def community_profiles() -> list[dict[str, object]]:
+    """Return the checked-in community profile seed records."""
+    return load_community_profiles()
 
 
 @app.post("/ingest", response_model=IngestResponse, status_code=201)
