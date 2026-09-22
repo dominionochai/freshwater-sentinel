@@ -19,6 +19,8 @@ TURBIDITY_YELLOW_NTU = 25.0
 TURBIDITY_RED_NTU = 60.0
 CHLOROPHYLL_YELLOW_UG_L = 20.0
 CHLOROPHYLL_RED_UG_L = 50.0
+# Backward-compatible name used by the water-quality module.
+CHLOROPHYLL_A_RED_UG_L = CHLOROPHYLL_RED_UG_L
 MIN_ANALYZED_PIXELS = 10
 
 # Activity-specific normalized thresholds, intentionally easy to audit/change.

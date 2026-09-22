@@ -32,7 +32,7 @@ class ScenePayload(BaseModel):
 class IngestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.:\\-]+$")
+    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.:\\/-]+$")
     scene: ScenePayload | None = None
     scene_path: str | None = None
     acquisition_date: date | None = None
@@ -77,6 +77,13 @@ class HumanAlert(BaseModel):
     title: str
     message: str
     action: str
+
+
+class HumanAlertRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    risk: dict[str, Any]
+    community_profile: CommunityProfile | None = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -153,7 +160,7 @@ class HealthLinkage(BaseModel):
     cases: int
     water_point_id: str
     community: str
-    community_profile: CommunityProfile | None
+    community_profile: CommunityProfile | None = None
     risk: HealthRisk
     plain_language: str
 
