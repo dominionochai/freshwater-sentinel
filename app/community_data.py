@@ -25,6 +25,7 @@ def load_community_profiles() -> list[dict[str, Any]]:
             raise ValueError(f"community profile at index {index} must be an object")
 
         profile = dict(record)
+        had_name = "name" in profile
         names = profile.get("names", [])
         if isinstance(names, str):
             names = [names]
@@ -40,7 +41,8 @@ def load_community_profiles() -> list[dict[str, Any]]:
         if canonical_name is None:
             raise ValueError(f"community profile at index {index} must have a meaningful name")
 
-        profile["name"] = canonical_name
+        if had_name:
+            profile["name"] = canonical_name
         # Keep the legacy display-name collection available to existing clients.
         profile["names"] = names or [canonical_name]
         normalized.append(profile)
