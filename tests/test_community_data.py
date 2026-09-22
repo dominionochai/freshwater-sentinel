@@ -16,7 +16,7 @@ def test_community_profiles_endpoint_returns_seed_profiles():
     assert profiles[0]["community"] == "Khaoleya"
     assert set(profiles[0]) == {"names", "community", "children", "school", "pets"}
 
-    demo = next(profile for profile in profiles if profile["name"] == "Demo Lake community")
+    demo = next(profile for profile in profiles if profile.get("name") == "Demo Lake community")
     assert demo == {
         "names": ["Demo Lake community"],
         "community": "Demo Lake community",
