@@ -79,7 +79,7 @@ class NetworkAnalysis:
         if ranked:
             top = ranked[0]
             rationale = (
-                f'Prioritize {top.node_id}: {top.rationale} '
+                f'Prioritize {top.node_id}: {top.rationale}. '
                 f'It has the highest propagated risk score '
                 f'({top.risk_score:.6f}) at {top.hops} hop(s).'
             )
