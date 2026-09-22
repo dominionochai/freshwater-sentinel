@@ -17,7 +17,7 @@ class ScenePayload(BaseModel):
     @model_validator(mode="after")
     def validate_rectangular_arrays(self) -> "ScenePayload":
         shapes = {
-            (len(rows), len(rows[0]) if rows else 0)
+            (len(rows), len(rows[0])) if rows else (0, 0)
             for rows in self.bands.values()
         }
         if not shapes or (0, 0) in shapes or len(shapes) != 1:
@@ -30,7 +30,7 @@ class ScenePayload(BaseModel):
 class IngestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.:-]+$")
+    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.:\-]+$")
     scene: ScenePayload | None = None
     scene_path: str | None = None
     acquisition_date: date | None = None
@@ -94,6 +94,9 @@ class QualitySummary(BaseModel):
     turbidity_p90_ntu: float
     chlorophyll_a_p90_ug_l: float
     quality_uncertainty: float
+    ndci_mean: float = 0.0
+    ndci_chlorophyll_a_ug_l: float = 0.0
+    chlorophyll_a_threshold_exceeded: bool = False
 
 
 class Explanation(BaseModel):
@@ -114,15 +117,3 @@ class AnalyzeResponse(BaseModel):
     explanation: Explanation
     water_mask: dict[str, Any]
     human_alert: HumanAlert | None = None
-
-
-class HealthResponse(BaseModel):
-    status: str
-    scenes_loaded: int
-    results_available: int
-    version: str
-
-
-class HumanAlertRequest(BaseModel):
-    risk: dict[str, ActivityRisk] = Field(min_length=1)
-    community_profile: CommunityProfile = Field(default_factory=CommunityProfile)
