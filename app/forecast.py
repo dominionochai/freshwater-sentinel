@@ -1,6 +1,6 @@
 """Deterministic, offline forecast fusion for district cholera risk.
 
-The module deliberately accepts already-fetched observations.  It never calls a
+The module deliberately accepts already-fetched observations. It never calls a
 remote service, so OpenWashData/WHO-shaped rows can be injected in tests or by
 a caller responsible for provenance and transport.
 """
@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any, Iterable, Mapping
+
 
 DEFAULT_WEIGHTS = {
     "mndwi": 0.15,
@@ -38,7 +39,9 @@ class ForecastConfig:
             raise ValueError("case_scale must be positive")
         weights = dict(self.weights)
         if set(weights) != set(DEFAULT_WEIGHTS):
-            raise ValueError("weights must contain mndwi, turbidity, chlorophyll_a, ndci, rainfall, and cholera")
+            raise ValueError(
+                "weights must contain mndwi, turbidity, chlorophyll_a, ndci, rainfall, and cholera"
+            )
         if any(value < 0 for value in weights.values()) or abs(sum(weights.values()) - 1.0) > 1e-9:
             raise ValueError("forecast weights must be non-negative and sum to 1")
 
@@ -91,7 +94,7 @@ def _normalise_satellite(satellite: Mapping[str, Any] | None) -> dict[str, float
     mndwi = _pick(raw, "mndwi", "MNDWI", "ndwi", "NDWI")
     if mndwi is None and isinstance(raw.get("water_mask"), (bool, int, float)):
         mndwi = raw["water_mask"]
-    # Existing spectral_features.py uses B03/B08 as its water index.  Reuse
+    # Existing spectral_features.py uses B03/B08 as its water index. Reuse
     # that convention as a fallback without changing its public output.
     if mndwi is None:
         green = _pick(raw, "B03", "b03", "green")
@@ -187,9 +190,10 @@ def forecast_district_risk(
     observed_on = _resolve_as_of(rows, as_of)
     start = observed_on - timedelta(days=effective_config.case_lookback_days)
     district_rows = [
-        row for row in rows
+        row
+        for row in rows
         if (_row_district(row) is None or _row_district(row) == str(district))
-        and (row_date := _date(_pick(row, "date", "reported_date", "event_date"))) is not None
+        and (row_date := _row_sample_date(row)) is not None
         and start <= row_date <= observed_on
     ]
     cases = sum(_row_cases(row) for row in district_rows)
@@ -268,7 +272,7 @@ def backtest_forecast(
     """Grade alerts against dated cases, returning HIT/MISS and actual lead time.
 
     A hit requires a dated positive case in the same district after the alert
-    date and within ``horizon_days``.  No correlation or row-order assumption is
+    date and within ``horizon_days``. No correlation or row-order assumption is
     used; both dates are parsed and compared explicitly.
     """
     rows = [dict(row) for row in cholera_rows]
