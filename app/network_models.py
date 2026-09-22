@@ -69,8 +69,47 @@ class NetworkAnalysis:
     uncertainty_state: str
     dashboard: dict[str, Any]
 
+    @property
+    def decision(self) -> dict[str, Any]:
+        """Return the deterministic act-here recommendation for this analysis."""
+        ranked = sorted(
+            self.propagation,
+            key=lambda event: (-event.risk_score, event.hops, event.node_id),
+        )
+        if ranked:
+            top = ranked[0]
+            rationale = (
+                f'Prioritize {top.node_id}: {top.rationale} '
+                f'It has the highest propagated risk score '
+                f'({top.risk_score:.6f}) at {top.hops} hop(s).'
+            )
+            act_here = top.node_id
+        else:
+            nodes = sorted(
+                self.dashboard.get('nodes', []),
+                key=lambda node: str(node.get('node_id', '')),
+            )
+            act_here = str(nodes[0].get('node_id', '')) if nodes else ''
+            rationale = (
+                'No propagated risk event was identified; use the first '
+                'deterministically ordered network node as the review point.'
+            )
+        return {
+            'act_here': act_here,
+            'rationale': rationale,
+            'alternatives': [asdict(item) for item in self.alternatives],
+        }
+
     def to_dict(self):
-        return {'network_id': self.network_id, 'alert_node_ids': list(self.alert_node_ids), 'propagation': [asdict(x) for x in self.propagation], 'alternatives': [asdict(x) for x in self.alternatives], 'uncertainty_state': self.uncertainty_state, 'dashboard': self.dashboard}
+        return {
+            'network_id': self.network_id,
+            'alert_node_ids': list(self.alert_node_ids),
+            'propagation': [asdict(x) for x in self.propagation],
+            'alternatives': [asdict(x) for x in self.alternatives],
+            'uncertainty_state': self.uncertainty_state,
+            'dashboard': self.dashboard,
+            'decision': self.decision,
+        }
 
 
 class NetworkBuildRequest(BaseModel):
