@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 TaskPriority = Literal["low", "medium", "high", "urgent"]
 TaskType = Literal["verify_source", "collect_sample", "confirm_alternative"]
-TaskStatus = Literal["pending", "in-progress", "done"]
+TaskStatus = Literal["pending", "in-progress", "done", "rerouted"]
 
 
 class FieldTaskCreate(BaseModel):
@@ -61,6 +61,8 @@ class NetworkDecisionTaskRequest(BaseModel):
     source_id: str | None = Field(default=None, max_length=120)
     sample_location: str | None = Field(default=None, max_length=120)
     sample_location_id: str | None = Field(default=None, max_length=120)
+    sample_site: str | None = Field(default=None, max_length=120)
+    sample_site_id: str | None = Field(default=None, max_length=120)
     alternative: str | None = Field(default=None, max_length=120)
     alternative_id: str | None = Field(default=None, max_length=120)
     alternatives: list[dict[str, object]] = Field(default_factory=list)

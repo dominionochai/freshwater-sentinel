@@ -23,6 +23,7 @@ _ALLOWED_STATUS_TRANSITIONS: dict[TaskStatus, frozenset[TaskStatus]] = {
     "pending": frozenset({"pending", "in-progress"}),
     "in-progress": frozenset({"in-progress", "done"}),
     "done": frozenset({"done"}),
+    "rerouted": frozenset({"rerouted"}),
 }
 
 
@@ -30,7 +31,10 @@ def _default_title_and_action(task_type: TaskType, target: str) -> tuple[str, st
     values = {
         "verify_source": (f"Verify source {target}", f"Verify source {target} in the field"),
         "collect_sample": (f"Collect sample at {target}", f"Collect a field sample at {target}"),
-        "confirm_alternative": (f"Confirm alternative {target}", f"Confirm safe alternative {target} before use"),
+        "confirm_alternative": (
+            f"Confirm alternative {target}",
+            f"Confirm safe alternative {target} before use",
+        ),
     }
     return values[task_type]
 
@@ -101,6 +105,7 @@ def reroute_field_task(request: RerouteTaskRequest) -> FieldTask:
             "reroute_reason": request.reason,
             "title": f"Confirm alternative {request.alternative_water_point_id}",
             "action": f"Confirm safe alternative {request.alternative_water_point_id} before use",
+            "status": "rerouted",
         })
         _TASKS[task.task_id] = updated
         return updated
@@ -130,17 +135,37 @@ def _decision_value(decision: Mapping[str, Any], keys: Sequence[str]) -> str | N
     return None
 
 
-def create_tasks_from_network_decision(decision: Mapping[str, Any], *, source: str = "network-decision") -> list[FieldTask]:
+def create_tasks_from_network_decision(
+    decision: Mapping[str, Any], *, source: str = "network-decision"
+) -> list[FieldTask]:
     water_body_id = _identifier(decision.get("water_body_id")) or _identifier(decision.get("network_id"))
     if not water_body_id:
         raise ValueError("network decision requires water_body_id or network_id")
-    source_id = _decision_value(decision, ("source", "source_id", "source_node_id", "source_water_point_id", "alert_node_id", "alert_node_ids")) or water_body_id
-    sample = _decision_value(decision, ("sample_location", "sample_location_id", "sample_site", "sample_site_id", "collect_sample_at", "field_sample_location", "field_sample_nodes", "target_water_point_id")) or water_body_id
-    alternative = _decision_value(decision, ("alternative", "alternative_id", "recommended_alternative", "recommended_alternative_id", "alternatives", "target_water_point_id")) or water_body_id
+    source_id = _decision_value(
+        decision,
+        ("source", "source_id", "source_node_id", "source_water_point_id", "alert_node_id", "alert_node_ids"),
+    ) or water_body_id
+    sample = _decision_value(
+        decision,
+        (
+            "sample_location",
+            "sample_location_id",
+            "sample_site",
+            "sample_site_id",
+            "collect_sample_at",
+            "field_sample_location",
+            "field_sample_nodes",
+            "target_water_point_id",
+        ),
+    ) or water_body_id
+    alternative = _decision_value(
+        decision,
+        ("alternative", "alternative_id", "recommended_alternative", "recommended_alternative_id", "alternatives", "target_water_point_id"),
+    ) or water_body_id
     specs = (
         ("verify_source", source_id, f"Verify source {source_id}", f"Verify source {source_id}"),
         ("collect_sample", sample, f"Collect sample at {sample}", f"Collect a field sample at {sample}"),
-        ("confirm_alternative", alternative, f"Confirm alternative {alternative}", f"Confirm safe alternative {alternative} before use"),
+        ("confirm_alternative", alternative, f"Confirm alternative {alternative}", f"Confirm safe alternative {alternative}"),
     )
     return [
         create_field_task(
