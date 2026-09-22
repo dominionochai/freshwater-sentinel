@@ -1,1 +1,50 @@
-ewogICJtbmR3aV9tZWFuIjogMC42ODkxMzMsCiAgIndhdGVyX2NvdmVyYWdlIjogMS4wLAogICJwaXhlbHNfYW5hbHl6ZWQiOiA0MDk2LAogICJ0dXJiaWRpdHlfbWVkaWFuX250dSI6IDY5LjI4NTcsCiAgInR1cmJpZGl0eV9wOTBfbnR1IjogNjkuODgsCiAgInR1cmJpZGl0eV9zaWduYWwiOiAxLjAsCiAgImNobG9yb3BoeWxsX2FfbWVkaWFuX3VnX2wiOiA2MC40NTQ1LAogICJjaGxvcm9waHlsbF9hX3A5MF91Z19sIjogNjEuNzI0MSwKICAiY2hsb3JvcGh5bGxfc2lnbmFsIjogMS4wLAogICJuZGNpX21lYW4iOiAwLjMwMTMxLAogICAibmRjaV9jaGxvcm9waHlsbF9hX3VnX2wiOiA2Ni41LAogICJvYnNlcnZhdGlvbl9zaWduYWwiOiAwLjAsCiAgInJpc2tzIjogewogICAgInN3aW1taW5nIjogeyJzY29yZSI6IDEuMCwgInNldmVyaXR5IjogInJlZCJ9LAogICAgImZpc2hpbmciOiB7InNjb3JlIjogMC43LCAic2V2ZXJpdHkiOiAieWVsbG93In0sCiAgICAicGV0cyI6IHsic2NvcmUiOiAwLjgsICJzZXZlcml0eSI6ICJyZWQifQogIH0sCiAgInVuY2VydGFpbnR5IjogMC4xMjUsCiAgImV4cGxhbmF0aW9uIjogewogICAgInN1bW1hcnkiOiAiSGlnaCBoYXJtZnVsLWFsZ2FsLWJsb29tIHNjcmVlbmluZyBzaWduYWwgZm9yIERlbW8gTGFrZSBjb21tdW5pdHkuIiwKICAgICJiYW5kX3NpZ25hbHMiOiBbCiAgICAgIHsiYmFuZCI6ICJCMDIiLCAic2lnbmFsIjogImJsdWUgd2F0ZXItY29sb3IgcmVzcG9uc2UifSwKICAgICAgeyJiYW5kIjogIkIwMyIsICJzaWduYWwiOiAiZ3JlZW4gd2F0ZXItY29sb3IgcmVzcG9uc2UifSwKICAgICAgeyJiYW5kIjogIkIwNCIsICJzaWduYWwiOiAicmVkIGJsb29tIHJlc3BvbnNlIn0sCiAgICAgIHsiYmFuZCI6ICJCMDUiLCAic2lnbmFsIjogInJlZC1lZGdlIHNwaWtlIn0KICAgIF0sCiAgICAibGltaXRhdGlvbnMiOiBbCiAgICAgICJyZWZsZWN0YW5jZSBwcm94aWVzIG5vdCBsYWIgbWVhc3VyZW1lbnRzIiwKICAgICAgImNsb3Vkcy9zaGFsbG93IGJvdHRvbS9taXhlZCBwaXhlbHMgY2FuIGJpYXMiLAogICAgICAidGhyZXNob2xkcyBuZWVkIGZpZWxkIHZhbGlkYXRpb24iCiAgICBdCiAgfSwKICAiYWxlcnRzIjogewogICAgImVuIjogewogICAgICAic2V2ZXJpdHkiOiAicmVkIiwKICAgICAgImNvbW11bml0eSI6ICJEZW1vIExha2UgY29tbXVuaXR5IiwKICAgICAgInRpdGxlIjogIldhdGVyIHdhdGNoOiBoaWdoIGNvbmNlcm4iLAogICAgICAibWVzc2FnZSI6ICJBIGhpZ2ggaGFybWZ1bC1hbGdhbC1ibG9vbSBzY3JlZW5pbmcgc2lnbmFsIHdhcyBkZXRlY3RlZCBmb3IgRGVtbyBMYWtlIGNvbW11bml0eS4gRG8gbm90IHN3aW0sIGRyaW5rIHVudHJlYXRlZCB3YXRlciwgb3IgaGFydmVzdCBmb29kIGZyb20gdGhlIGFmZmVjdGVkIHdhdGVyLiIsCiAgICAgICJhY3Rpb24iOiAiS2VlcCBwZW9wbGUgYW5kIGFuaW1hbHMgYXdheSBhbmQgY29udGFjdCB0aGUgbG9jYWwgaGVhbHRoIG9yIHdhdGVyIGF1dGhvcml0eSBmb3IgY29uZmlybWF0aW9uLiIKICAgIH0sCiAgICAic3ciOiB7CiAgICAgICJzZXZlcml0eSI6ICJyZWQiLAogICAgICAiY29tbXVuaXR5IjogIkRlbW8gTGFrZSBjb21tdW5pdHkiLAogICAgICAidGl0bGUiOiAiVWFuZ2FsaXppIHdhIG1hamk6IGhhdGFyaSBrdWJ3YSIsCiAgICAgICJtZXNzYWdlIjogIklzaGFyYSBrdWJ3YSB5YSBtd2FuaSBoYXRhcmkgaW1lZ3VuZHVsaXdhIGthdGlrYSBEZW1vIExha2UgY29tbXVuaXR5LiBVc2lvb2dlbGVlLCB1c2lueXdlIG1hamkgeWFzaXlvdGliaXdhLCB3YWxhIHVzaXZ1bmUgY2hha3VsYSBrdXRva2Ega3dlbnllIG1hamkgeWFsaXl vYXRoaXJpa2EuIiwKICAgICAgImFjdGlvbiI6ICJXYXdl a2Ugd2F0dSBuYSB3YW55YW1hIG1iYWxpIG5hIG1hamkgaGF5byBuYSB3YXNpbGlhbmEgbmEgbWFtbGFrYSB5YSBhZnlhIGF1IG1hamkga3dhIHV0aGliaXRpc2hvLiIKICAgIH0KICB9Cn0K
+{
+  "mndwi_mean": 0.689133,
+  "water_coverage": 1.0,
+  "pixels_analyzed": 4096,
+  "turbidity_median_ntu": 69.2857,
+  "turbidity_p90_ntu": 69.88,
+  "turbidity_signal": 1.0,
+  "chlorophyll_a_median_ug_l": 60.4545,
+  "chlorophyll_a_p90_ug_l": 61.7241,
+  "chlorophyll_signal": 1.0,
+  "ndci_mean": 0.30131,
+  "ndci_chlorophyll_a_ug_l": 66.5,
+  "observation_signal": 0.0,
+  "risks": {
+    "swimming": {"score": 1.0, "severity": "red"},
+    "fishing": {"score": 0.7, "severity": "yellow"},
+    "pets": {"score": 0.8, "severity": "red"}
+  },
+  "uncertainty": 0.125,
+  "explanation": {
+    "summary": "High harmful-algal-bloom screening signal for Demo Lake community.",
+    "band_signals": [
+      {"band": "B02", "signal": "blue water-color response"},
+      {"band": "B03", "signal": "green water-color response"},
+      {"band": "B04", "signal": "red bloom response"},
+      {"band": "B05", "signal": "red-edge spike"}
+    ],
+    "limitations": [
+      "reflectance proxies not lab measurements",
+      "clouds/shallow bottom/mixed pixels can bias",
+      "thresholds need field validation"
+    ]
+  },
+  "alerts": {
+    "en": {
+      "severity": "red",
+      "community": "Demo Lake community",
+      "title": "Water watch: high concern",
+      "message": "A high harmful-algal-bloom screening signal was detected for Demo Lake community. Do not swim, drink untreated water, or harvest food from the affected water.",
+      "action": "Keep people and animals away and contact the local health or water authority for confirmation."
+    },
+    "sw": {
+      "severity": "red",
+      "community": "Demo Lake community",
+      "title": "Uangalizi wa maji: hatari kubwa",
+      "message": "Ishara kubwa ya mwani hatari imegunduliwa katika Demo Lake community. Usioogelee, usinywe maji yasiyotibiwa, wala usivune chakula kutoka kwenye maji yaliyoathirika.",
+      "action": "Waweke watu na wanyama mbali na maji hayo na wasiliana na mamlaka ya afya au maji kwa uthibitisho."
+    }
+  }
+}
