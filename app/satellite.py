@@ -83,7 +83,9 @@ def fetch_preview(tile: str, scene_date: str | date | datetime, *, item_id: str 
     for offset in range(max_lookback_days + 1):
         candidate = requested - timedelta(days=offset)
         try:
-            payload, url = _first_available(preview_urls(tile, candidate, item_id), downloader)
+            payload, url = _first_available(
+                preview_urls(tile, candidate, item_id if candidate == requested else None), downloader
+            )
             return {"scene_date": candidate.isoformat(), "url": url, "content": payload}
         except FileNotFoundError:
             continue
