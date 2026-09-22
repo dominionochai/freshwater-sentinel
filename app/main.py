@@ -1,5 +1,4 @@
 """FastAPI entrypoint for Freshwater Sentinel."""
-
 from __future__ import annotations
 
 from uuid import uuid4
@@ -15,12 +14,13 @@ from app.models import (
     AnalyzeRequest,
     AnalyzeResponse,
     HealthLinkageResponse,
+    HealthResponse,
     HumanAlert,
     HumanAlertRequest,
     IngestRequest,
     IngestResponse,
-    HealthResponse,
 )
+from app.network_routes import router as network_router
 from app.pipeline import Scene, analyze, scene_from_geotiff, scene_from_payload
 
 app = FastAPI(
@@ -28,6 +28,7 @@ app = FastAPI(
     version=__version__,
     description="Water-only multispectral screening with explainable activity risk.",
 )
+app.include_router(network_router)
 SCENES: dict[str, Scene] = {}
 LATEST_BY_WATER_BODY: dict[str, AnalyzeResponse] = {}
 

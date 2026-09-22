@@ -11,13 +11,17 @@ from app.water_quality import QualityMetrics
 
 class ScenePayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     acquisition_date: date | None = None
     bands: dict[str, list[list[float]]] = Field(min_length=1)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_rectangular_arrays(self) -> "ScenePayload":
-        shapes = {(len(rows), len(rows[0])) if rows else (0, 0) for rows in self.bands.values()}
+        shapes = {
+            (len(rows), len(rows[0])) if rows else (0, 0)
+            for rows in self.bands.values()
+        }
         if not shapes or (0, 0) in shapes or len(shapes) != 1:
             raise ValueError("all scene bands must be non-empty rectangular arrays of equal shape")
         return self
@@ -25,6 +29,7 @@ class ScenePayload(BaseModel):
 
 class IngestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.\-/]+$")
     scene: ScenePayload | None = None
     scene_path: str | None = None
@@ -56,6 +61,7 @@ class HABObservation(BaseModel):
 
 class CommunityProfile(BaseModel):
     """Small, privacy-preserving profile used to localize an alert or linkage."""
+
     names: list[str] = Field(default_factory=list)
     community: str = Field(default="the community", min_length=1, max_length=120)
     children: list[Any] = Field(default_factory=list)
@@ -76,12 +82,14 @@ class HumanAlert(BaseModel):
 
 class HumanAlertRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     risk: dict[str, Any]
     community_profile: CommunityProfile | None = None
 
 
 class AnalyzeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     scene_id: str = Field(min_length=1)
     hab_observations: list[HABObservation] = Field(default_factory=list, max_length=50)
     community_profile: CommunityProfile | None = None
@@ -124,6 +132,7 @@ class AnalyzeResponse(BaseModel):
     explanation: Explanation
     water_mask: dict[str, Any]
     scene_metadata: dict[str, Any] = Field(default_factory=dict)
+    network_analysis: dict[str, Any] | None = None
     human_alert: HumanAlert | None = None
 
 
@@ -136,7 +145,9 @@ class HealthResponse(BaseModel):
 
 class HealthReport(BaseModel):
     """Synthetic clinic signal used only for a demo linkage."""
+
     model_config = ConfigDict(extra="forbid")
+
     report_id: str = Field(min_length=1, max_length=120)
     disease: Literal["cholera", "typhoid"]
     report_date: date
