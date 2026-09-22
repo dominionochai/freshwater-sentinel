@@ -54,5 +54,15 @@
     "children": [],
     "school": null,
     "pets": []
+  },
+  {
+    "names": ["Demo Lake community"],
+    "community": "Demo Lake community",
+    "children": [{"age_group": "under_10", "count": 14}],
+    "school": "Demo Lake Primary School",
+    "pets": [{"households_with_pets": 3}],
+    "name": "Demo Lake community",
+    "language": "en",
+    "preferred_channel": "dashboard"
   }
 ]

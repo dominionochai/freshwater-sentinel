@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-# ``python scripts/demo.py`` puts ``scripts/`` (not the repository root) on
+# `python scripts/demo.py` puts `scripts/` (not the repository root) on
 # sys.path. Add the root so the sibling script can be imported as documented.
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -43,6 +43,9 @@ def main() -> None:
                     "name": "Demo Lake community",
                     "language": args.language,
                     "preferred_channel": "dashboard",
+                    "children": [{"age_group": "under_10", "count": 14}],
+                    "school": "Demo Lake Primary School",
+                    "pets": [{"households_with_pets": 3}],
                 },
             },
         )
