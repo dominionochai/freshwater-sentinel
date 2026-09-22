@@ -24,7 +24,7 @@ jobs:
       - name: Download verified HDX resource
         run: |
           curl --fail --silent --show-error --location --retry 5 --retry-delay 2 --retry-all-errors \
-            "https://data.humdata.org/dataset/4c5e7cd0-3d28-4827-888c-e58e80b2eb47/resource/d0a23110-8be3-43f2-ab31-44a37cb5b804/download/wpdx_enhanced.csv" \
+            "https://data.humdata.org/dataset/4c5e7cd0-3d28-4827-888c-e58e80b2eb47/resource/d0a23110-8be3-43f2-ab31-04a37cb5b804/download/wpdx_enhanced.csv" \
             --output /tmp/wpdx_enhanced.csv
       - name: Inspect source headers and build Malawi slice
         run: python scripts/fetch_wpdx_malawi.py --input /tmp/wpdx_enhanced.csv
@@ -50,6 +50,8 @@ jobs:
           print(f"rows={len(rows)} sha256={manifest['sha256']}")
           print(f"source_columns={manifest['source_columns']}")
           PY
+      - name: Install pytest
+        run: python -m pip install pytest
       - name: Run registry tests
         run: python -m pytest -q tests/test_registry.py
       - name: Commit generated registry
