@@ -1,109 +1,86 @@
-# Urban Freshwater Sentinel
+# Freshwater Sentinel
 
-Backend-first prototype for the **OneAquaHealth IEEE Global Hackathon**. Urban Freshwater Sentinel turns multispectral imagery into transparent freshwater bloom-risk signals that connect ecosystem health, human health, and responsible AI.
-
-> **One Health pitch:** help communities act before a harmful algal bloom affects swimming, fishing, pets, or the wider freshwater ecosystem. The system only scores pixels classified as water, exposes the bands and uncertainty behind each signal, and keeps human decision-makers in the loop.
+Freshwater Sentinel is a backend-first prototype for transparent freshwater screening. It combines water-only multispectral proxies with synthetic, privacy-preserving community and clinic-demo records. The health linkage is an exploratory screening aid: it does not establish disease transmission, diagnose patients, or replace field and laboratory confirmation.
 
 ## What is included
 
-- FastAPI service with `/ingest`, `/analyze`, `/health`, and `/risk/{water_body_id}`.
-- Sentinel-2-style bands or a local multiband GeoTIFF input.
-- MNDWI/NDVI water masking so land and vegetation do not contaminate water-quality statistics.
-- Optional, default-off OmniWaterMask integration with automatic MNDWI/NDVI fallback.
-- Transparent turbidity and chlorophyll-a proxy calculations, including Python NDCI screening and a configurable threshold flag.
-- Configurable green/yellow/red risk for swimming, fishing, and pets.
-- Plain-language explanations covering pixels, bands/signals, alert date, limitations, and uncertainty.
-- Deterministic synthetic GeoTIFF generation for an offline demo.
-
-## ASCII architecture
-
-```text
-Sentinel-2 scene / GeoTIFF / JSON bands
-                |
-                v
-       POST /ingest --> scene registry
-                |
-                v
-       POST /analyze (optional HAB observations)
-                |
-                +--> water_masking.py --> water-only pixels
-                |                         |
-                |                         +--> optional OmniWaterMask (default off)
-                +--> water_quality.py --> turbidity + chlorophyll-a + NDCI
-                |                         |
-                |                         +--> hab_risk.py --> activity risk
-                +--> explain.py --> human-readable evidence/uncertainty
-                v
-       GET /risk/{water_body_id} --> API-ready result
-```
+- FastAPI service in `app/main.py` with `/ingest`, `/analyze`, `/risk/{water_body_id}`, `/health`, `/community-profiles`, and the synthetic `/health-linkage` endpoint.
+- Pydantic request and response models in `app/models.py`, including the clinic-report and linkage schemas.
+- Deterministic scene generator at `scripts/make_sample_scene.py` and runnable demo at `scripts/demo.py`.
+- Water masking in `app/water_masking.py`, water-quality proxies in `app/water_quality.py`, HAB/activity risk in `app/hab_risk.py`, and plain-language explanations in `app/explain.py`.
+- Synthetic health linkage seed at `data/clinic_reports.json`, joined to the checked-in community profiles at `data/community_profiles.json` by `app/health_linkage.py`.
+- A filtered borehole seed at `data/malawi_boreholes.csv`; provenance and licensing notes are in `data/README.md`.
 
 ## Quickstart
-
-### 1. Run locally
 
 Python 3.11+ is recommended.
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\\Scripts\\activate
+source .venv/bin/activate             # Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
 python scripts/make_sample_scene.py --output data/sample_scene.tif
 uvicorn app.main:app --reload
 ```
 
-In another terminal:
+In another terminal, run the offline demo:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/ingest \\
-  -H 'Content-Type: application/json' \\
-  -d '{"water_body_id":"demo-lagoon","scene_path":"data/sample_scene.tif","acquisition_date":"2026-09-20"}'
-
-curl -X POST http://127.0.0.1:8000/analyze \\
-  -H 'Content-Type: application/json' \\
-  -d '{"scene_id":"<scene_id>"}'
-
-curl http://127.0.0.1:8000/risk/demo-lagoon
-curl http://127.0.0.1:8000/health
+python scripts/demo.py
 ```
 
-You can also send inline arrays through `scene.bands` with keys `B02`, `B03`, `B04`, `B05`, `B08`, `B11`; `B12` is optional.
+The API is available at `http://127.0.0.1:8000`; interactive documentation is at `/docs`. The demo linkage can be viewed with:
 
-### Optional OmniWaterMask
-
-The established MNDWI/NDVI mask is used by default. To opt into an installed OmniWaterMask implementation, call the Python API with `use_omniwatermask=True`:
-
-```python
-from app.water_masking import create_water_mask
-mask, diagnostics = create_water_mask(bands, use_omniwatermask=True)
+```bash
+curl http://127.0.0.1:8000/health-linkage
 ```
 
-The adapter is import-safe: if the optional package or a compatible entry point is absent, raises during prediction, or returns the wrong shape, the existing MNDWI/NDVI mask is returned. OmniWaterMask is optional and MIT-licensed; see `vendor/README.md` for provenance.
+The response contains each synthetic report's disease, date, case count, water-point reference, matched community profile, a simple screening risk, and plain wording such as `5 cholera cases trace to this water point in Khaoleya.` Every record is marked `synthetic_demo` in `data/clinic_reports.json`.
 
-### NDCI chlorophyll screening
+## API flow
 
-`app.water_quality.calculate_ndci` implements `NDCI = (B05 - B04) / (B05 + B04)`. The quality result additionally reports `ndci_mean`, `ndci_chlorophyll_a_ug_l`, and `chlorophyll_a_threshold_exceeded`. The threshold defaults to the existing chlorophyll-a red screening breakpoint and is a screening aid, not a laboratory or regulatory result.
+```text
+POST /ingest -> in-memory scene registry
+                 |
+                 v
+             POST /analyze -> water mask -> quality -> activity risk -> explanation
+                 |
+                 v
+             GET /risk/{water_body_id}
 
-## API behavior
+GET /health-linkage -> data/clinic_reports.json
+                        + data/community_profiles.json
+                        -> water-point case totals and profile joins
+```
 
-- `/ingest` accepts one inline Sentinel-2-like scene or a local GeoTIFF path and returns a generated `scene_id`.
-- `/analyze` runs the deterministic pipeline. `hab_observations` can contain optional observations with severity 0–1.
-- `/risk/{water_body_id}` returns the latest analysis, including per-activity label and score, quality metrics, water-pixel count, evidence, and uncertainty.
-- `/health` reports service status and the number of in-memory scenes/results.
+`/health-linkage` intentionally reads checked-in demo data and returns no patient identifiers. It is not a causal inference endpoint; the word “trace” describes the synthetic water-point reference in a report.
+
+## Data and current paths
+
+- `data/clinic_reports.json`: synthetic cholera and typhoid reports with dates and water-point references. Do not treat these as surveillance data.
+- `data/community_profiles.json`: small privacy-preserving demo profiles used for localized wording.
+- `data/malawi_boreholes.csv`: filtered borehole seed; see `data/README.md` for source and license.
+- `scripts/make_sample_scene.py`: deterministic GeoTIFF generator for offline development.
+- `scripts/demo.py`: local end-to-end demo.
+- `app/main.py`: FastAPI application and routes.
+- `app/health_linkage.py`: validated report loader and report/profile/risk join.
+- `tests/test_api_health_linkage.py`: minimal endpoint contract test.
 
 ## Responsible AI and scientific boundaries
 
-This is a screening aid, not a laboratory result, regulatory decision, or medical/safety guarantee. Clouds, atmospheric correction, adjacency effects, sensor differences, shallow bottoms, and mixed pixels can bias proxies. Thresholds are explicit in `config.py`, uncertainty is surfaced, and field/laboratory validation should precede public alerts. Human and community review remains part of the operating model.
+This is a screening aid, not a laboratory result, regulatory decision, medical diagnosis, or safety guarantee. Clouds, atmospheric correction, adjacency effects, sensor differences, shallow bottoms, and mixed pixels can bias proxies. NDCI and chlorophyll-a estimates require local calibration; field and laboratory validation should precede public alerts. Human and community review remains part of the operating model.
 
-## Recipe
+## Attribution and licenses
 
-- Original FastAPI pipeline: ingestion, water masking, water quality, HAB risk, explanations, and API endpoints.
-- `vendor/get-pak/methods.py`: original local implementation of published estimator proxies, with MIT attribution to [get-pak](https://github.com/SNO-HYBAM/get-pak).
-- `app/water_masking.py`: original MNDWI/NDVI implementation inspired by and attributed to [WaterDetect](https://github.com/cordmaur/WaterDetect); no WaterDetect code is vendored.
-- Optional OmniWaterMask adapter: MIT-licensed external integration point; it is not required for installation and no external code is copied into this repository.
-- `app/water_quality.py`: Python NDCI and chlorophyll-a threshold screening derived from the NDCI remote-sensing algorithm described by Mishra & Mishra (2012), with coefficients documented in the function docstring and intended for transparent screening rather than regulatory use.
-- `vendor/README.md`: provenance notes, licensing scope, usage, and atmospheric-correction/calibration caveats.
+The project code is MIT-licensed under `LICENSE`. The following external projects, datasets, concepts, and algorithms are acknowledged with their scope and license:
 
-The scientific caveats above govern these transparent screening proxies; they are not copied upstream code or validated regulatory measurements.
+- **get-pak — MIT.** The compact implementation in `vendor/get-pak/methods.py` is an original local implementation of the published red/NIR turbidity and green/red-edge chlorophyll-a estimator concepts. Algorithmic inspiration is attributed to [SNO-HYBAM/get-pak](https://github.com/SNO-HYBAM/get-pak). No upstream file is copied into this repository.
+- **OmniWaterMask — MIT.** `app/water_masking.py` exposes an optional external OmniWaterMask integration point; the default remains the local MNDWI/NDVI mask. No OmniWaterMask source is copied here. Any deployment using the external package must retain its MIT license and attribution.
+- **boreholelabdata — CC BY 4.0.** `data/malawi_boreholes.csv` is a filtered extract of [openwashdata/boreholelabdata](https://github.com/openwashdata/boreholelabdata), licensed under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/). The extract retains only fields needed by this prototype.
+- **One-Health-Database-Africa — MIT.** The cross-domain health/water linkage concept is attributed to [ecohealthalliance/One-Health-Database-Africa](https://github.com/ecohealthalliance/One-Health-Database-Africa), whose concept and code are MIT-licensed. This repository copies none of its data; `data/clinic_reports.json` is synthetic/demo data created for this project.
+- **Water-quality algorithms.** `app/water_quality.py` implements the NDCI formula `(B05 - B04) / (B05 + B04)` and a transparent chlorophyll-a screening proxy derived from Mishra & Mishra (2012), *Normalized difference chlorophyll index: A novel model for remote estimation of chlorophyll-a concentration in turbid productive waters*. The Python implementation is original, is not a copy of source code, and is a screening proxy requiring local calibration and validation.
+
+See `vendor/README.md` for the same component-level provenance and usage boundaries.
 
 ## Development
 
@@ -113,7 +90,3 @@ pytest -q
 ```
 
 The sample scene is deterministic (`numpy` seed 7), so offline smoke tests and demos are reproducible.
-
-## License
-
-MIT

@@ -1,4 +1,4 @@
-"""FastAPI entrypoint for Urban Freshwater Sentinel."""
+"""FastAPI entrypoint for Freshwater Sentinel."""
 
 from __future__ import annotations
 
@@ -9,14 +9,16 @@ from fastapi import FastAPI, HTTPException
 from app import __version__
 from app.alerts import build_human_alert
 from app.community_data import load_community_profiles
+from app.health_linkage import build_health_linkage
 from app.models import (
     AnalyzeRequest,
     AnalyzeResponse,
-    HealthResponse,
+    HealthLinkageResponse,
     HumanAlert,
     HumanAlertRequest,
     IngestRequest,
     IngestResponse,
+    HealthResponse,
 )
 from app.pipeline import Scene, analyze, scene_from_geotiff, scene_from_payload
 
@@ -43,6 +45,12 @@ def health() -> HealthResponse:
 def community_profiles() -> list[dict[str, object]]:
     """Return the checked-in community profile seed records."""
     return load_community_profiles()
+
+
+@app.get("/health-linkage", response_model=HealthLinkageResponse)
+def health_linkage() -> HealthLinkageResponse:
+    """Join synthetic clinic reports to community profiles and water-point risk."""
+    return build_health_linkage()
 
 
 @app.post("/ingest", response_model=IngestResponse, status_code=201)
@@ -73,7 +81,9 @@ def ingest(request: IngestRequest) -> IngestResponse:
 def run_analysis(request: AnalyzeRequest) -> AnalyzeResponse:
     scene = SCENES.get(request.scene_id)
     if scene is None:
-        raise HTTPException(status_code=404, detail=f"scene not found: {request.scene_id}")
+        raise HTTPException(
+            status_code=404, detail=f"scene not found: {request.scene_id}"
+        )
     try:
         result = analyze(scene, request.hab_observations)
     except ValueError as exc:
