@@ -30,6 +30,7 @@ except Exception:  # pragma: no cover - only used in incomplete deployments
         value = np.clip(45.0 * ratio - 5.0, 0.0, 500.0)
         return _FallbackEstimate(value, 1.0 + 0.25 * np.abs(value))
 
+
 NDCI_RED_BAND = "B04"
 NDCI_RED_EDGE_BAND = "B05"
 # The existing red screening breakpoint is the conservative default threshold.
@@ -48,6 +49,7 @@ class QualityMetrics:
     ndci_mean: float = 0.0
     ndci_chlorophyll_a_ug_l: float = 0.0
     chlorophyll_a_threshold_exceeded: bool = False
+    ndci_chlorophyll_a_threshold_exceeded: bool = False
 
     def as_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -133,7 +135,9 @@ def estimate_quality(
     finite_ndci_chlorophyll = np.isfinite(ndci_chlorophyll_values)
     ndci_mean = float(np.nanmean(ndci_values)) if finite_ndci.any() else 0.0
     ndci_chlorophyll_mean = (
-        float(np.nanmean(ndci_chlorophyll_values)) if finite_ndci_chlorophyll.any() else 0.0
+        float(np.nanmean(ndci_chlorophyll_values))
+        if finite_ndci_chlorophyll.any()
+        else 0.0
     )
 
     turbidity_spread = float(np.nanstd(turbidity_values) / max(TURBIDITY_RED_NTU, 1.0))
@@ -142,7 +146,8 @@ def estimate_quality(
     )
     estimator_spread = float(
         (
-            np.nanmedian(np.asarray(turbidity.uncertainty, dtype=float)) / max(TURBIDITY_RED_NTU, 1.0)
+            np.nanmedian(np.asarray(turbidity.uncertainty, dtype=float))
+            / max(TURBIDITY_RED_NTU, 1.0)
             + np.nanmedian(np.asarray(chlorophyll.uncertainty, dtype=float))
             / max(CHLOROPHYLL_A_RED_UG_L, 1.0)
         )
@@ -150,8 +155,12 @@ def estimate_quality(
     )
     coverage = _coverage(selected, mask.size)
     quality_uncertainty = float(
-        np.clip(0.10 + 0.35 * (1.0 - coverage) + 0.20 * estimator_spread
-                + 0.15 * min(turbidity_spread + chlorophyll_spread, 1.0), 0.0, 1.0)
+        np.clip(
+            0.10 + 0.35 * (1.0 - coverage) + 0.20 * estimator_spread
+            + 0.15 * min(turbidity_spread + chlorophyll_spread, 1.0),
+            0.0,
+            1.0,
+        )
     )
     return QualityMetrics(
         pixels_analyzed=count,
@@ -164,6 +173,9 @@ def estimate_quality(
         ndci_mean=ndci_mean,
         ndci_chlorophyll_a_ug_l=ndci_chlorophyll_mean,
         chlorophyll_a_threshold_exceeded=detect_chlorophyll_a_threshold(
+            chlorophyll_values
+        ),
+        ndci_chlorophyll_a_threshold_exceeded=detect_chlorophyll_a_threshold(
             ndci_chlorophyll_values
         ),
     )
