@@ -15,9 +15,10 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m compileall app config.py vendor scripts
       - run: pytest -q
+      - run: sha256sum data/who_cholera_malawi.csv
       - name: Run documented demo smoke test
         run: |
-          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/freshwater-sentinel-uvicorn.log 2>&1 &
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 >/tmp/freshwater-sentinel-uvicorn.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           python - <<'PY'
