@@ -1,23 +1,44 @@
-IiIiRGV0ZXJtaW5pc3RpYywgb2ZmbGluZSBmb3JlY2FzdCBmdXNpb24gZm9y
-IGRpc3RyaWN0IGNob2xlcmEgcmlzay4KClRoZSBtb2R1bGUgZGVsaWJlcmF0
-ZWx5IGFjY2VwdHMgYWxyZWFkeS1mZXRjaGVkIG9ic2VydmF0aW9ucy4gSXQg
-bmV2ZXIgY2FsbHMgYQpyZW1vdGUgc2VydmljZSwgc28gT3Blbldhc2hEYXRh
-L1dITy1zaGFwZWQgcm93cyBjYW4gYmUgaW5qZWN0ZWQgaW4gdGVzdHMgb3Ig
-YnkKYSBjYWxsZXIgcmVzcG9uc2libGUgZm9yIHByb3ZlbmFuY2UgYW5kIHRy
-YW5zcG9ydC4KIiIiCmZyb20gX19mdXR1cmVfXyBpbXBvcnQgYW5ub3RhdGlv
-bnMKCmZyb20gZGF0YWNsYXNzZXMgaW1wb3J0IGRhdGFjbGFzcywgZmllbGQK
-ZnJvbSBkYXRldGltZSBpbXBvcnQgZGF0ZSwgZGF0ZXRpbWUsIHRpbWVkZWx0
-YQpmcm9tIHR5cGluZyBpbXBvcnQgQW55LCBJdGVyYWJsZSwgTWFwcGluZwoK
-CkRFRkFVTFRfV0VJR0hUUyA9IHsKICAgICJtbmR3aSI6IDAuMTUsCiAgICAi
-dHVyYmlkaXR5IjogMC4xNSwKICAgICJjaGxvcm9waHlsbF9hIjogMC4xNSwK
-ICAgICJuZGNpIjogMC4xNSwKICAgICJyYWluZmFsbCI6IDAuMjAsCiAgICAi
-Y2hvbGVyYSI6IDAuMjAsCn0KCgpAZGF0YWNsYXNzKGZyb3plbj1UcnVlKQpj
-bGFzcyBGb3JlY2FzdENvbmZpZzoKICAgICIiIlRocmVzaG9sZHMgYW5kIHdl
-aWdodHMgdXNlZCBieSA6ZnVuYzpgZm9yZWNhc3RfZGlzdHJpY3RfcmlzayAu
-IiIiCgogICAgc2FtcGxlX21heF9hZ2VfZGF5czoGaW50ID0gMTQKICAgIGNh
-c2VfbG9va2JhY2tfZGF5czogaW50ID0gMjgKICAgIHdhcm5pbmdfdGhyZXNo
-b2xkOiBmbG9hdCA9IDAuNDUKICAgIGFsZXJ0X3RocmVzaG9sZDogZmxvYXQg
-PSAwLjcwCiAgICBjYXNlX3NjYWxlOiBmbG9hdCA9IDEwLjAKICAgIHdlaWdodHM6IE1hcHBpbmdbc3RyLCBmbG9hdF0gPSBmaWVsZChkZWZhdWx0X2ZhY3Rvcnk9bGFtYmRhOiBkaWN0KERFRkFVTFRfV0VJR0hUUykpCgogICAgZGVmIF9fcG9zdF9pbml0X18oc2VsZikgLT4gTm9uZToKICAgICAgICBpZiBzZWxmLnNhbXBsZV9tYXhfYWdlX2RheXMgPCAwIG9yIHNlbGYuY2FzZV9sb29rYmFja19kYXlzIDwgMDoKICAgICAgICAgICAgcmFpc2UgVmFsdWVFcnJvcigibG9va2JhY2sgYW5kIHNhbXBsZSBhZ2VzIG11c3QgYmUgbm9uLW5lZ2F0aXZlIikKICAgICAgICBpZiBzZWxmLmNhc2Vfc2NhbGUgPD0gMDoKICAgICAgICAgICAgcmFpc2UgVmFsdWVFcnJvcigiY2FzZV9zY2FsZSBtdXN0IGJlIHBvc2l0aXZlIikKICAgICAgICB3ZWlnaHRzID0gZGljdChzZWxmLndlaWdodHMpCiAgICAgICAg if set(weights) != set(DEFAULT_WEIGHTS):
+"""Deterministic, offline forecast fusion for district cholera risk.
+
+The module deliberately accepts already-fetched observations. It never calls a
+remote service, so OpenWashData/WHO-shaped rows can be injected in tests or by
+a caller responsible for provenance and transport.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta
+from typing import Any, Iterable, Mapping
+
+
+DEFAULT_WEIGHTS = {
+    "mndwi": 0.15,
+    "turbidity": 0.15,
+    "chlorophyll_a": 0.15,
+    "ndci": 0.15,
+    "rainfall": 0.20,
+    "cholera": 0.20,
+}
+
+
+@dataclass(frozen=True)
+class ForecastConfig:
+    """Thresholds and weights used by :func:`forecast_district_risk`."""
+
+    sample_max_age_days: int = 14
+    case_lookback_days: int = 28
+    warning_threshold: float = 0.45
+    alert_threshold: float = 0.70
+    case_scale: float = 10.0
+    weights: Mapping[str, float] = field(default_factory=lambda: dict(DEFAULT_WEIGHTS))
+
+    def __post_init__(self) -> None:
+        if self.sample_max_age_days < 0 or self.case_lookback_days < 0:
+            raise ValueError("lookback and sample ages must be non-negative")
+        if self.case_scale <= 0:
+            raise ValueError("case_scale must be positive")
+        weights = dict(self.weights)
+        if set(weights) != set(DEFAULT_WEIGHTS):
             raise ValueError(
                 "weights must contain mndwi, turbidity, chlorophyll_a, ndci, rainfall, and cholera"
             )
