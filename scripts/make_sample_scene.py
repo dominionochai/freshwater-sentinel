@@ -10,7 +10,7 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
-BANDS = ("B02", "B03", "B04", "B08", "B11")
+BANDS = ("B02", "B03", "B04", "B05", "B08", "B11")
 
 
 def create_sample_scene(output: str | Path = "data/sample_scene.tif") -> Path:
@@ -18,11 +18,14 @@ def create_sample_scene(output: str | Path = "data/sample_scene.tif") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     size = 64
     y, x = np.mgrid[0:size, 0:size]
-    bloom = ((x - 32) ** 2 + (y - 31) ** 2 < 15**2).astype(np.float32)
+    bloom = (((x - 32) ** 2 + (y - 31) ** 2) < 15**2).astype(np.float32)
     values = {
         "B02": 0.045 + 0.010 * bloom,
         "B03": 0.160 + 0.055 * bloom,
         "B04": 0.060 + 0.012 * bloom,
+        # The bloom patch raises green reflectance more than red-edge,
+        # producing a higher NDCI/chlorophyll signal than surrounding water.
+        "B05": 0.110 + 0.035 * bloom,
         "B08": 0.105 + 0.020 * bloom,
         "B11": 0.030 + 0.006 * bloom,
     }

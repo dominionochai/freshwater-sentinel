@@ -16,8 +16,8 @@ from app.water_masking import create_water_mask
 from app.water_quality import QualityMetrics, estimate_quality
 from config import MIN_ANALYZED_PIXELS
 
-REQUIRED_BANDS = ("B02", "B03", "B04", "B08", "B11")
-DEFAULT_GEOTIFF_BANDS = ("B02", "B03", "B04", "B08", "B11", "B12")
+REQUIRED_BANDS = ("B02", "B03", "B04", "B05", "B08", "B11")
+DEFAULT_GEOTIFF_BANDS = ("B02", "B03", "B04", "B05", "B08", "B11")
 
 
 @dataclass(frozen=True)
@@ -29,9 +29,17 @@ class Scene:
 
 
 def scene_from_payload(water_body_id: str, payload: ScenePayload, requested_date: date | None) -> Scene:
-    bands = {name.upper(): np.asarray(values, dtype=float) for name, values in payload.bands.items()}
+    bands = {
+        name.upper(): np.asarray(values, dtype=float)
+        for name, values in payload.bands.items()
+    }
     _validate_bands(bands)
-    return Scene(water_body_id, requested_date or payload.acquisition_date or date.today(), bands, "inline-scene")
+    return Scene(
+        water_body_id,
+        requested_date or payload.acquisition_date or date.today(),
+        bands,
+        "inline-scene",
+    )
 
 
 def scene_from_geotiff(water_body_id: str, path: str, requested_date: date | None) -> Scene:
@@ -66,4 +74,12 @@ def analyze(scene: Scene, observations: list[HABObservation]) -> AnalyzeResponse
         raise ValueError(f"only {metrics.pixels_analyzed} valid water pixels; need at least {MIN_ANALYZED_PIXELS}")
     risk = score_risk(metrics, observations)
     explanation = build_explanation(metrics, risk, scene.acquisition_date, diagnostics, observations)
-    return AnalyzeResponse(scene_id="", water_body_id=scene.water_body_id, acquisition_date=scene.acquisition_date, risk=risk, quality=metrics.as_dict(), explanation=explanation, water_mask={**diagnostics, "pixels_in_mask": int(mask.sum()), "scene_pixels": int(mask.size)})
+    return AnalyzeResponse(
+        scene_id="",
+        water_body_id=scene.water_body_id,
+        acquisition_date=scene.acquisition_date,
+        risk=risk,
+        quality=metrics.as_dict(),
+        explanation=explanation,
+        water_mask={**diagnostics, "pixels_in_mask": int(mask.sum()), "scene_pixels": int(mask.size)},
+    )

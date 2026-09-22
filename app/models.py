@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.water_quality import QualityMetrics
+
 
 class ScenePayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -32,7 +34,7 @@ class ScenePayload(BaseModel):
 class IngestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.:/\\-]+$")
+    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_:.\\/-]+$")
     scene: ScenePayload | None = None
     scene_path: str | None = None
     acquisition_date: date | None = None
@@ -130,7 +132,6 @@ class AnalyzeResponse(BaseModel):
     quality: QualitySummary
     explanation: Explanation
     water_mask: dict[str, Any]
-    human_alert: HumanAlert | None = None
 
 
 class HealthResponse(BaseModel):
