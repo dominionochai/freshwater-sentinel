@@ -9,7 +9,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 DEFAULT_SCENE_PATH = DATA_DIR / "sample_scene.tif"
 
 # Water mask thresholds.
-MNDWI_MIN = 0.05
+NDWI_MIN = 0.05
 NDVI_MAX_FOR_WATER = 0.45
 REFLECTANCE_MIN = 0.0
 REFLECTANCE_MAX = 1.0
@@ -19,7 +19,8 @@ TURBIDITY_YELLOW_NTU = 25.0
 TURBIDITY_RED_NTU = 60.0
 CHLOROPHYLL_YELLOW_UG_L = 20.0
 CHLOROPHYLL_RED_UG_L = 50.0
-# Backward-compatible name used by the water-quality module.
+# Backward-compatible names used by the water-quality module.
+CHLOROPHYLL_A_YELLOW_UG_L = CHLOROPHYLL_YELLOW_UG_L
 CHLOROPHYLL_A_RED_UG_L = CHLOROPHYLL_RED_UG_L
 MIN_ANALYZED_PIXELS = 10
 
