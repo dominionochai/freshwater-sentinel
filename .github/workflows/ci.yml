@@ -13,5 +13,26 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: python -m compileall app config.py vendor
+      - run: python -m compileall app config.py vendor scripts
       - run: pytest -q
+      - name: Run documented demo smoke test
+        run: |
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/freshwater-sentinel-uvicorn.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          python - <<'PY'
+          import time
+          import httpx
+
+          for _ in range(30):
+              try:
+                  response = httpx.get("http://127.0.0.1:8000/openapi.json", timeout=1)
+                  response.raise_for_status()
+                  break
+              except (httpx.HTTPError, OSError):
+                  time.sleep(1)
+          else:
+              raise SystemExit("API did not become ready")
+          PY
+          python scripts/make_sample_scene.py
+          python scripts/demo.py

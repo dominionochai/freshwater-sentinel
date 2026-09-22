@@ -3,7 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+# ``python scripts/demo.py`` puts ``scripts/`` (not the repository root) on
+# sys.path. Add the root so the sibling script can be imported as documented.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import httpx
 
@@ -41,6 +48,7 @@ def main() -> None:
         )
         analysis.raise_for_status()
         payload = analysis.json()
+
     print(payload["human_alert"]["title"])
     print(payload["human_alert"]["message"])
     print(payload["human_alert"]["action"])
