@@ -1,35 +1,16 @@
-# Fresh Water Sentinel — Presenter Demo Script (4:45)
+# Fresh Water Sentinel — Demo Script (5:00, v2)
 
-## Purpose
+## Elevator Pitch (60s)
+Fresh Water Sentinel is a One Health early-warning system for drinking water in Malawi. We model every water point as a node in a living network — boreholes, lab tests, dependent communities, satellite signals. When one borehole turns anomalous, FWS doesn't just flag it: it traces who depends on that water, who shares its risk signature, and where exposure will spread next. It then tells the response team ONE place to act, with VERIFIED-SAFE alternatives, and if lab evidence is too thin, it fails closed: FIELD SAMPLE REQUIRED. After the response, FWS grades itself — hit, miss, lead time — and feeds that outcome back into the risk engine. Detect early. Verify before acting. Fail safely. Learn from every outcome.
 
-This is the exact presenter-paced order for the offline-first frontend demo. Start the demo, then use **one Next beat button** to advance one beat at a time. Do not reorder the beats or introduce a second action inside a beat. The UI keeps `USE_LIVE_API = false`, the existing design/palette, and the hardcoded offline data.
-
-## Eight beats
-
-1. **EYES — 0:00–0:35 (35s)**
-   Open on the prominent fresh Sentinel-2 false-color scene and water mask. Point out the 22 Sep acquisition, red-edge bloom response, and the explicit distinction between a screening proxy and a laboratory result.
-
-2. **BRAIN — 0:35–1:15 (40s)**
-   Show the district risk score fusing the satellite signal, cholera history, and seven-day rainfall. The score **RISES before cases** move. Keep the thin-evidence gate visible: **FIELD SAMPLE REQUIRED** before escalation.
-
-3. **VOICE — 1:15–1:50 (35s)**
-   Show the alert payload as an English SMS, a Swahili SMS, and a Chichewa call-in script for Chipatala Cha Pa Foni. The message is usable offline and keeps the field-confirmation instruction.
-
-4. **NETWORK — 1:50–2:35 (45s)**
-   Trace the anomaly at **Khaoleya borehole 4** to the affected settlements (Khaoleya, Chisomo, and Matope). Show ranked **VERIFIED-SAFE** alternatives. Keep **DECISION** visible in this NETWORK beat, with exactly one **ACT HERE** marker: route collection to the top verified-safe alternative while the source is sampled.
-
-5. **SENTINEL — 2:35–3:05 (30s)**
-   Highlight the previously unseen anomaly detection. Make novelty clear: the red-edge and turbidity combination is outside the local baseline, so the sentinel triggers verification rather than pretending to have a diagnosis.
-
-6. **HANDS — 3:05–3:40 (35s)**
-   Show the field task queue: **verify source**, **sample suspect**, **confirm alternative**. Demonstrate the status path **pending → in-progress → done** and explain that the suspect remains a proxy until evidence arrives.
-
-7. **MEMORY — 3:40–4:10 (30s)**
-   Open the WPdx-style water-point registry record for **Khaoleya borehole 4**. Call out **turbidity 0.1 NTU** and **faecal coliforms 0 CFU/100mL**, alongside the water-point identity and status.
-
-8. **VERIFY — 4:10–4:45 (35s)**
-   Close with the timeline **alert → action → following weeks**. The observed outcome is a **HIT** with **lead time 3 weeks**. Show the outcome feeding back into risk scoring and leave the **MEMORY 2.0** note visible.
-
-## Close
-
-At 4:45, stop on VERIFY. The story is: detect early, communicate locally, trace the network, act at one place, verify in the field, and learn from the outcome. Total rough runtime: **4:45** (within the requested 4:30–5:00 window).
+## Demo Script (5:00) — demo order: EYES, BRAIN, VOICE, NETWORK, SENTINEL, HANDS, MEMORY, VERIFY
+0:00-0:40 OPEN — Malawi mission dashboard. Narration: every community here depends on a water point. when one goes bad, the whole chain suffers. this system watches that chain — and acts before the sickness spreads.
+0:40-1:20 BEAT 1 — EYES (the satellite, the main deal): full-screen the Sentinel-2 scene. false-color, water mask glowing. EYES pulls fresh satellite tiles over Malawi and reads the water — color, turbidity, bloom signals. it sees what the community can't see yet.
+1:20-2:10 BEAT 2 — BRAIN (the main main deal, all their data): risk map. BRAIN fuses everything — satellite signal, WHO cholera history, rainfall — into a per-district risk score. watch this district: the score RISES before any case is reported. the forecast leads. and when lab evidence is thin, BRAIN doesn't guess: it says FIELD SAMPLE REQUIRED.
+2:10-2:40 BEAT 3 — VOICE: SMS previews English + Swahili, then the Chichewa call-in script. the warning leaves the screen and reaches people through a channel they actually use — SMS, plus a recorded Chichewa message, the Chipatala Cha Pa Foni pattern.
+2:40-3:15 BEAT 4 — NETWORK: DEMO RUN. borehole A turns red, affected settlements light amber, verified-safe alternatives green with distance + evidence, ONE act here marker. one bad node, a whole subgraph at risk — and we already know the safe way out.
+3:15-3:35 BEAT 5 — SENTINEL: highlight the anomaly type as previously unseen. SENTINEL doesn't wait for a known pattern — it catches anomalies nobody has seen before.
+3:35-4:05 BEAT 6 — HANDS: field task queue — verify source, sample suspect, confirm alternative. statuses flip pending -> in-progress -> done. the warning becomes a field response.
+4:05-4:30 BEAT 7 — MEMORY: the registry. Khaoleya borehole 4, turbidity 0.1 NTU, faecal coliforms. MEMORY is the system's infrastructure brain — every point, every measurement, in one registry.
+4:30-4:50 BEAT 8 — VERIFY + MEMORY 2.0: timeline alert -> action -> following weeks. HIT, lead time 3 weeks. after every alert the system grades itself — hit, miss, lead time — and feeds that lesson back into the risk engine. it gets smarter with every outbreak it prevents.
+4:50-5:00 CLOSE — detect early. verify before acting. fail safely. Fresh Water Sentinel.
