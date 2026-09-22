@@ -7,32 +7,59 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 
 from app import __version__
-from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse, IngestRequest, IngestResponse
+from app.alerts import build_human_alert
+from app.models import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    HealthResponse,
+    HumanAlert,
+    HumanAlertRequest,
+    IngestRequest,
+    IngestResponse,
+)
 from app.pipeline import Scene, analyze, scene_from_geotiff, scene_from_payload
 
-app = FastAPI(title="Urban Freshwater Sentinel", version=__version__, description="Water-only multispectral screening with explainable activity risk.")
+app = FastAPI(
+    title="Urban Freshwater Sentinel",
+    version=__version__,
+    description="Water-only multispectral screening with explainable activity risk.",
+)
 SCENES: dict[str, Scene] = {}
 LATEST_BY_WATER_BODY: dict[str, AnalyzeResponse] = {}
 
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", scenes_loaded=len(SCENES), results_available=len(LATEST_BY_WATER_BODY), version=__version__)
+    return HealthResponse(
+        status="ok",
+        scenes_loaded=len(SCENES),
+        results_available=len(LATEST_BY_WATER_BODY),
+        version=__version__,
+    )
 
 
 @app.post("/ingest", response_model=IngestResponse, status_code=201)
 def ingest(request: IngestRequest) -> IngestResponse:
     try:
         if request.scene is not None:
-            scene = scene_from_payload(request.water_body_id, request.scene, request.acquisition_date)
+            scene = scene_from_payload(
+                request.water_body_id, request.scene, request.acquisition_date
+            )
         else:
             assert request.scene_path is not None
-            scene = scene_from_geotiff(request.water_body_id, request.scene_path, request.acquisition_date)
-    except (AssertionError, FileNotFoundError, ValueError, OSError) as exc:
+            scene = scene_from_geotiff(
+                request.water_body_id, request.scene_path, request.acquisition_date
+            )
+    except (AssertionError, FileNotFoundError, OSError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     scene_id = f"scene_{uuid4().hex}"
     SCENES[scene_id] = scene
-    return IngestResponse(scene_id=scene_id, water_body_id=scene.water_body_id, source=scene.source, acquisition_date=scene.acquisition_date)
+    return IngestResponse(
+        scene_id=scene_id,
+        water_body_id=scene.water_body_id,
+        source=scene.source,
+        acquisition_date=scene.acquisition_date,
+    )
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)
@@ -42,16 +69,32 @@ def run_analysis(request: AnalyzeRequest) -> AnalyzeResponse:
         raise HTTPException(status_code=404, detail=f"scene not found: {request.scene_id}")
     try:
         result = analyze(scene, request.hab_observations)
-    except (ValueError, OSError) as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     result = result.model_copy(update={"scene_id": request.scene_id})
+    if request.community_profile is not None:
+        result = result.model_copy(
+            update={
+                "human_alert": build_human_alert(
+                    result.risk, request.community_profile
+                )
+            }
+        )
     LATEST_BY_WATER_BODY[scene.water_body_id] = result
     return result
+
+
+@app.post("/alerts/human", response_model=HumanAlert)
+def human_alert(request: HumanAlertRequest) -> HumanAlert:
+    return build_human_alert(request.risk, request.community_profile)
 
 
 @app.get("/risk/{water_body_id}", response_model=AnalyzeResponse)
 def latest_risk(water_body_id: str) -> AnalyzeResponse:
     result = LATEST_BY_WATER_BODY.get(water_body_id)
     if result is None:
-        raise HTTPException(status_code=404, detail=f"no analysis found for water body: {water_body_id}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"no analysis found for water body: {water_body_id}",
+        )
     return result

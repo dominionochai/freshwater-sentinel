@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -16,7 +16,10 @@ class ScenePayload(BaseModel):
 
     @model_validator(mode="after")
     def validate_rectangular_arrays(self) -> "ScenePayload":
-        shapes = {(len(rows), len(rows[0]) if rows else 0) for rows in self.bands.values()}
+        shapes = {
+            (len(rows), len(rows[0]) if rows else 0)
+            for rows in self.bands.values()
+        }
         if not shapes or (0, 0) in shapes or len(shapes) != 1:
             raise ValueError("all scene bands must be non-empty rectangular arrays of equal shape")
         if any(any(len(row) == 0 for row in rows) for rows in self.bands.values()):
@@ -53,11 +56,28 @@ class HABObservation(BaseModel):
     note: str | None = Field(default=None, max_length=500)
 
 
+class CommunityProfile(BaseModel):
+    """Small, privacy-preserving profile used only to localize an alert."""
+
+    name: str = Field(default="the community", min_length=1, max_length=120)
+    language: Literal["en", "sw"] = "en"
+    preferred_channel: Literal["dashboard", "sms", "whatsapp"] = "dashboard"
+
+
+class HumanAlert(BaseModel):
+    severity: Literal["green", "yellow", "red"]
+    language: Literal["en", "sw"]
+    title: str
+    message: str
+    action: str
+
+
 class AnalyzeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     scene_id: str = Field(min_length=1)
     hab_observations: list[HABObservation] = Field(default_factory=list, max_length=50)
+    community_profile: CommunityProfile | None = None
 
 
 class ActivityRisk(BaseModel):
@@ -93,6 +113,7 @@ class AnalyzeResponse(BaseModel):
     quality: QualitySummary
     explanation: Explanation
     water_mask: dict[str, Any]
+    human_alert: HumanAlert | None = None
 
 
 class HealthResponse(BaseModel):
@@ -100,3 +121,8 @@ class HealthResponse(BaseModel):
     scenes_loaded: int
     results_available: int
     version: str
+
+
+class HumanAlertRequest(BaseModel):
+    risk: dict[str, ActivityRisk] = Field(min_length=1)
+    community_profile: CommunityProfile = Field(default_factory=CommunityProfile)
