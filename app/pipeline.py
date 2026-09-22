@@ -1,10 +1,10 @@
 """Scene loading and orchestration for the analysis pipeline."""
-
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import rasterio
@@ -17,7 +17,7 @@ from app.water_quality import QualityMetrics, estimate_quality
 from config import MIN_ANALYZED_PIXELS
 
 REQUIRED_BANDS = ("B02", "B03", "B04", "B05", "B08", "B11")
-DEFAULT_GEOTIFF_BANDS = ("B02", "B03", "B04", "B05", "B08", "B11")
+DEFAULT_GEOTIFF_BANDS = REQUIRED_BANDS
 
 
 @dataclass(frozen=True)
@@ -26,19 +26,18 @@ class Scene:
     acquisition_date: date
     bands: dict[str, np.ndarray]
     source: str
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def scene_from_payload(water_body_id: str, payload: ScenePayload, requested_date: date | None) -> Scene:
-    bands = {
-        name.upper(): np.asarray(values, dtype=float)
-        for name, values in payload.bands.items()
-    }
+    bands = {name.upper(): np.asarray(values, dtype=float) for name, values in payload.bands.items()}
     _validate_bands(bands)
     return Scene(
         water_body_id,
         requested_date or payload.acquisition_date or date.today(),
         bands,
         "inline-scene",
+        {"source_type": "inline_payload", **payload.metadata},
     )
 
 
@@ -48,12 +47,31 @@ def scene_from_geotiff(water_body_id: str, path: str, requested_date: date | Non
         raise FileNotFoundError(f"GeoTIFF path does not exist: {path}")
     with rasterio.open(file_path) as dataset:
         if dataset.count < len(REQUIRED_BANDS):
-            raise ValueError(f"GeoTIFF must contain at least {len(REQUIRED_BANDS)} bands")
-        names = [description.upper() if description else DEFAULT_GEOTIFF_BANDS[index] for index, description in enumerate(dataset.descriptions)]
-        bands = {name: dataset.read(index + 1).astype(float) for index, name in enumerate(names)}
-        acquisition = requested_date or date.fromisoformat(dataset.tags().get("ACQUISITION_DATE", date.today().isoformat()))
+            raise ValueError(f"GeoTIFF must contain at least {len(REQUIRED_BANDS)} bands in {REQUIRED_BANDS} order")
+        bands = {name: dataset.read(index + 1).astype(float) for index, name in enumerate(DEFAULT_GEOTIFF_BANDS)}
+        tags = {str(key): str(value) for key, value in dataset.tags().items()}
+        metadata: dict[str, Any] = {
+            "source_type": "local_geotiff",
+            "path": str(file_path),
+            "driver": dataset.driver,
+            "width": dataset.width,
+            "height": dataset.height,
+            "count": dataset.count,
+            "crs": str(dataset.crs) if dataset.crs else None,
+            "transform": str(dataset.transform),
+            "band_descriptions": list(dataset.descriptions),
+            "tags": tags,
+        }
+        metadata = {key: value for key, value in metadata.items() if value is not None}
+        raw_date = tags.get("ACQUISITION_DATE")
+    acquisition = requested_date
+    if acquisition is None and raw_date:
+        try:
+            acquisition = date.fromisoformat(raw_date[:10])
+        except ValueError:
+            acquisition = None
     _validate_bands(bands)
-    return Scene(water_body_id, acquisition, bands, f"geotiff:{file_path}")
+    return Scene(water_body_id, acquisition or date.today(), bands, f"geotiff:{file_path}", metadata)
 
 
 def _validate_bands(bands: dict[str, np.ndarray]) -> None:
@@ -61,10 +79,10 @@ def _validate_bands(bands: dict[str, np.ndarray]) -> None:
     if missing:
         raise ValueError(f"scene missing required bands: {', '.join(missing)}")
     shapes = {array.shape for array in bands.values()}
-    if len(shapes) != 1 or next(iter(shapes), ()) == ():
+    if len(shapes) != 1:
         raise ValueError("all scene bands must have the same non-empty 2D shape")
-    if any(array.ndim != 2 for array in bands.values()):
-        raise ValueError("scene bands must be two-dimensional")
+    if any(array.ndim != 2 or 0 in array.shape for array in bands.values()):
+        raise ValueError("scene bands must be non-empty two-dimensional arrays")
 
 
 def analyze(scene: Scene, observations: list[HABObservation]) -> AnalyzeResponse:
@@ -82,4 +100,5 @@ def analyze(scene: Scene, observations: list[HABObservation]) -> AnalyzeResponse
         quality=metrics.as_dict(),
         explanation=explanation,
         water_mask={**diagnostics, "pixels_in_mask": int(mask.sum()), "scene_pixels": int(mask.size)},
+        scene_metadata=scene.metadata,
     )
