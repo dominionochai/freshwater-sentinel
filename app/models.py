@@ -1,4 +1,4 @@
-"""Validated API request and response models."""
+"""Validated API request, response, and health-linkage models."""
 
 from __future__ import annotations
 
@@ -21,7 +21,9 @@ class ScenePayload(BaseModel):
             for rows in self.bands.values()
         }
         if not shapes or (0, 0) in shapes or len(shapes) != 1:
-            raise ValueError("all scene bands must be non-empty rectangular arrays of equal shape")
+            raise ValueError(
+                "all scene bands must be non-empty rectangular arrays of equal shape"
+            )
         if any(any(len(row) == 0 for row in rows) for rows in self.bands.values()):
             raise ValueError("scene bands cannot contain empty rows")
         return self
@@ -30,7 +32,7 @@ class ScenePayload(BaseModel):
 class IngestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.:\-]+$")
+    water_body_id: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.:\\-]+$")
     scene: ScenePayload | None = None
     scene_path: str | None = None
     acquisition_date: date | None = None
@@ -57,8 +59,13 @@ class HABObservation(BaseModel):
 
 
 class CommunityProfile(BaseModel):
-    """Small, privacy-preserving profile used only to localize an alert."""
+    """Small, privacy-preserving profile used to localize an alert or linkage."""
 
+    names: list[str] = Field(default_factory=list)
+    community: str = Field(default="the community", min_length=1, max_length=120)
+    children: list[Any] = Field(default_factory=list)
+    school: Any | None = None
+    pets: list[Any] = Field(default_factory=list)
     name: str = Field(default="the community", min_length=1, max_length=120)
     language: Literal["en", "sw"] = "en"
     preferred_channel: Literal["dashboard", "sms", "whatsapp"] = "dashboard"
@@ -117,3 +124,43 @@ class AnalyzeResponse(BaseModel):
     explanation: Explanation
     water_mask: dict[str, Any]
     human_alert: HumanAlert | None = None
+
+
+class HealthReport(BaseModel):
+    """Synthetic clinic signal used only for a demo linkage."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    report_id: str = Field(min_length=1, max_length=120)
+    disease: Literal["cholera", "typhoid"]
+    report_date: date
+    case_count: int = Field(ge=0)
+    water_point_id: str = Field(min_length=1, max_length=120)
+    community: str = Field(min_length=1, max_length=120)
+    source: Literal["synthetic_demo"] = "synthetic_demo"
+
+
+class HealthRisk(BaseModel):
+    score: float = Field(ge=0.0, le=1.0)
+    label: Literal["green", "yellow", "red"]
+    rationale: str
+
+
+class HealthLinkage(BaseModel):
+    report_id: str
+    disease: Literal["cholera", "typhoid"]
+    report_date: date
+    cases: int
+    water_point_id: str
+    community: str
+    community_profile: CommunityProfile | None
+    risk: HealthRisk
+    plain_language: str
+
+
+class HealthLinkageResponse(BaseModel):
+    synthetic: bool = True
+    source_note: str
+    total_reports: int
+    total_cases: int
+    linkages: list[HealthLinkage]
