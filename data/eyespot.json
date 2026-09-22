@@ -1,1 +1,7 @@
-{"item_id":"S2A_MSIL2A_20260922T075631_R035_T36LVM_20260922T125740","tile":"36/L/VM","datetime":"2026-09-22T07:56:31.024Z","cloud_cover":4.793748,"source":"planetary-computer-stac"}
+{
+  "item_id": "S2A_MSIL2A_20260922T075631_R035_T36LVM_20260922T125740",
+  "tile": "36/L/VM",
+  "datetime": "2026-09-22T07:56:31.024Z",
+  "cloud_cover": 4.793748,
+  "source": "planetary-computer-stac"
+}
