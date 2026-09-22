@@ -27,6 +27,6 @@ def test_ndci_screening_is_exposed_to_quality_and_risk():
     }
     metrics = estimate_quality(bands, np.ones((2, 2), dtype=bool))
 
-    assert metrics.ndci_mean == 0.5
-    assert metrics.chlorophyll_a_threshold_exceeded is True
+    assert np.isclose(metrics.ndci_mean, 0.5)
+    assert metrics.ndci_chlorophyll_a_threshold_exceeded is True
     assert score_risk(metrics)["swimming"].label == "red"
