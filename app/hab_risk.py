@@ -1,5 +1,4 @@
 """Configurable activity risk scoring for harmful-algal-bloom screening."""
-
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -60,6 +59,8 @@ def score_risk(
             ("observations", observation_signal),
         ):
             score += signal * weights[name]
+        if activity == "swimming" and metrics.ndci_chlorophyll_a_threshold_exceeded:
+            score = 1.0
         score = round(min(max(score, 0.0), 1.0), 4)
         label = _label(score, activity)
         rationale = (
