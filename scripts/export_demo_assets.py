@@ -2,7 +2,7 @@
 """Build the offline demo assets from the repository's real analysis pipeline.
 
 This script intentionally does not download data, call a service, or require an
-API key.  It is a generator: run it locally when demo assets are needed.
+API key. It is a generator: run it locally when demo assets are needed.
 """
 
 from __future__ import annotations
@@ -15,8 +15,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
-# ``python scripts/export_demo_assets.py`` puts ``scripts/`` on sys.path first.
-# Add the repository root so the real ``app`` package and scene generator are
+# `python scripts/export_demo_assets.py` puts `scripts/` on sys.path first.
+# Add the repository root so the real `app` package and scene generator are
 # imported consistently from both the repository root and an installed checkout.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -29,7 +29,7 @@ import rasterio
 from app.alerts import build_human_alert
 from app.community_data import load_community_profiles
 from app.models import CommunityProfile, HABObservation
-from app.pipeline import analyze, scene_from_geotiff
+from app.pipeline import analyze, scene_from_geotif
 from app.water_masking import create_water_mask
 from scripts.make_sample_scene import create_sample_scene
 
@@ -52,7 +52,7 @@ def _status(label: str, action: Callable[[], Any]) -> Any:
 
 
 def _stretch_2_98(values: np.ndarray) -> np.ndarray:
-    """Percentile-stretch one band to uint8 using the requested 2-98 range."""
+    """Percentile-stretch one band to uint8 using the requested 2–98 range."""
     values = np.asarray(values, dtype=np.float32)
     finite = values[np.isfinite(values)]
     if finite.size == 0:
@@ -124,7 +124,7 @@ def _model_dump(value: Any) -> Any:
         return {str(key): _model_dump(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [_model_dump(item) for item in value]
-    if isinstance(value, (date,)):
+    if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, np.generic):
         return value.item()
@@ -138,7 +138,8 @@ def _demo_profile() -> CommunityProfile:
         (
             item
             for item in profiles
-            if item.get("name") == DEMO_COMMUNITY or item.get("community") == DEMO_COMMUNITY
+            if item.get("name") == DEMO_COMMUNITY
+            or item.get("community") == DEMO_COMMUNITY
         ),
         None,
     )
@@ -154,7 +155,7 @@ def _demo_profile() -> CommunityProfile:
 
 
 def _write_analysis_asset() -> dict[str, Any]:
-    scene = scene_from_geotiff("demo-lake", str(SCENE_PATH), requested_date=date.today())
+    scene = scene_from_geotif("demo-lake", str(SCENE_PATH), requested_date=date.today())
     observations = [
         HABObservation(
             source="offline-demo-observation",
@@ -177,7 +178,11 @@ def _write_analysis_asset() -> dict[str, Any]:
     result_json = _model_dump(result)
     risk_json = _model_dump(risk)
     result_json["risk_scores"] = {
-        activity: {"score": values["score"], "tier": values["label"], "rationale": values["rationale"]}
+        activity: {
+            "score": values["score"],
+            "tier": values["label"],
+            "rationale": values["rationale"],
+        }
         for activity, values in risk_json.items()
     }
     result_json["alerts"] = {
@@ -192,7 +197,7 @@ def _write_analysis_asset() -> dict[str, Any]:
     result_json["observations"] = _model_dump(observations)
     result_json["export_notes"] = {
         "offline": True,
-        "pipeline": "scene_from_geotiff -> analyze(scene, observations)",
+        "pipeline": "scene_from_geotif -> analyze(scene, observations)",
         "uncertainty_source": "analysis.explanation.uncertainty and analysis.quality.quality_uncertainty",
         "explainability_source": "analysis.explanation",
     }
@@ -203,6 +208,7 @@ def _write_analysis_asset() -> dict[str, Any]:
 
 
 def main() -> None:
+    global ASSET_DIR
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--asset-dir",
@@ -211,7 +217,6 @@ def main() -> None:
         help="directory for PNG and JSON outputs (default: assets)",
     )
     args = parser.parse_args()
-    global ASSET_DIR
     ASSET_DIR = args.asset_dir if args.asset_dir.is_absolute() else REPO_ROOT / args.asset_dir
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
 
