@@ -6,8 +6,10 @@ a caller responsible for provenance and transport.
 """
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 
@@ -149,6 +151,35 @@ def _row_cases(row: Mapping[str, Any]) -> float:
     return cases
 
 
+def _load_national_baseline(path: str | Path | None) -> list[dict[str, Any]]:
+    """Load the repository's annual WHO Malawi baseline without network access."""
+    if path is None:
+        return []
+    try:
+        with Path(path).open(newline="", encoding="utf-8") as handle:
+            return [dict(row) for row in csv.DictReader(handle)]
+    except (OSError, UnicodeError, csv.Error):
+        return []
+
+
+def _national_baseline_signal(rows: Iterable[Mapping[str, Any]], as_of: date) -> tuple[float | None, float | None]:
+    """Return mean historical cases and a bounded score through ``as_of``."""
+    values: list[float] = []
+    for row in rows:
+        try:
+            year = int(float(_pick(row, "year")))
+            cases = max(0.0, _number(_pick(row, "reported_cases", "cases", default=0)))
+        except (TypeError, ValueError):
+            continue
+        if year <= as_of.year:
+            values.append(cases)
+    if not values:
+        return None, None
+    baseline = sum(values) / len(values)
+    peak = max(values)
+    return baseline, max(0.0, min(1.0, baseline / peak)) if peak else 0.0
+
+
 def _row_sample_date(row: Mapping[str, Any]) -> date | None:
     value = _pick(row, "lab_sample_date", "sample_date", "laboratory_date", "lab_date")
     if value is None and _pick(row, "lab_sample", "sample_collected", default=False):
@@ -174,6 +205,7 @@ def forecast_district_risk(
     as_of: date | datetime | str | None = None,
     config: ForecastConfig | None = None,
     weights: Mapping[str, float] | None = None,
+    national_baseline_path: str | Path | None = "data/who_cholera_malawi.csv",
 ) -> dict[str, Any]:
     """Fuse environmental and injectable health evidence into one district risk."""
     rows = [dict(row) for row in cholera_rows]
@@ -198,10 +230,19 @@ def forecast_district_risk(
     ]
     cases = sum(_row_cases(row) for row in district_rows)
     case_score = max(0.0, min(1.0, cases / effective_config.case_scale))
-    sample_dates = [sample for row in district_rows if (sample := _row_sample_date(row)) is not None and sample <= observed_on]
-    latest_sample = max(sample_dates) if sample_dates else None
+    latest_sample = max(
+        (sample for row in district_rows if (sample := _row_sample_date(row)) is not None),
+        default=None,
+    )
     sample_age = (observed_on - latest_sample).days if latest_sample else None
     field_sample_required = latest_sample is None or sample_age >= effective_config.sample_max_age_days
+
+    national_rows = _load_national_baseline(national_baseline_path)
+    national_baseline_cases, national_baseline_score = _national_baseline_signal(national_rows, observed_on)
+    if national_baseline_score is not None:
+        # Keep district observations and the annual national history as equal,
+        # auditable inputs to the existing cholera component.
+        case_score = (case_score + national_baseline_score) / 2.0
 
     components = _normalise_satellite(satellite)
     components["rainfall"] = _rainfall_score(rainfall)
@@ -232,6 +273,8 @@ def forecast_district_risk(
         "components": {name: round(value, 6) for name, value in components.items()},
         "weights": final_weights,
         "cholera_cases": cases,
+        "national_baseline_cases": national_baseline_cases,
+        "national_baseline_score": national_baseline_score,
         "lab_sample_date": latest_sample.isoformat() if latest_sample else None,
         "sample_age_days": sample_age,
         "sample_max_age_days": effective_config.sample_max_age_days,
