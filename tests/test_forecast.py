@@ -36,3 +36,26 @@ def test_configurable_sample_age_is_respected():
         as_of="2024-06-15", config=ForecastConfig(sample_max_age_days=14),
     )
     assert result["field_sample_required"] is True
+
+
+def test_forecast_combines_local_national_baseline_with_district_and_rainfall(tmp_path):
+    baseline_path = tmp_path / "who_cholera_malawi.csv"
+    baseline_path.write_text(
+        "year,reported_cases\n2023,100\n2024,200\n",
+        encoding="utf-8",
+    )
+    result = forecast_district_risk(
+        "Lake District",
+        satellite={},
+        rainfall={"recent_total_mm": 60},
+        cholera_rows=[
+            {"district": "Lake District", "lab_sample_date": "2024-06-10", "cases": 2},
+        ],
+        as_of="2024-06-15",
+        national_baseline_path=baseline_path,
+    )
+    assert result["cholera_cases"] == 2.0
+    assert result["national_baseline_cases"] == 150.0
+    assert result["national_baseline_score"] == 0.75
+    assert result["components"]["cholera"] == 0.475
+    assert result["components"]["rainfall"] == 1.0
