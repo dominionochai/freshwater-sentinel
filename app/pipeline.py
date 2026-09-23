@@ -1,88 +1,44 @@
-"""Scene loading and orchestration for the analysis pipeline."""
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-from datetime import date
-from pathlib import Path
-from typing import Any, Mapping, Sequence
-
-import numpy as np
-import rasterio
-
-from app.explain import build_explanation
-from app.hab_risk import score_risk
-from app.models import AnalyzeResponse, HABObservation, ScenePayload
-from app.network import analyze_water_network
-from app.network_models import WaterNetwork
-from app.rainfall import rainfall_features
-from app.spectral_features import compute_spectral_features, summarize_spectral_features
-from app.water_masking import create_water_mask
-from app.water_quality import QualityMetrics, estimate_quality
-from config import MIN_ANALYZED_PIXELS
-
-REQUIRED_BANDS = ("B02", "B03", "B04", "B05", "B08", "B11")
-DEFAULT_GEOTIFF_BANDS = REQUIRED_BANDS
-
-
-@dataclass(frozen=True)
-class Scene:
-    water_body_id: str
-    acquisition_date: date
-    bands: dict[str, np.ndarray]
-    source: str
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-def scene_from_payload(water_body_id: str, payload: ScenePayload, requested_date: date | None = None) -> Scene:
-    bands = {name.upper(): np.asarray(values, dtype=float) for name, values in payload.bands.items()}
-    _validate_bands(bands)
-    return Scene(water_body_id, requested_date or payload.acquisition_date or date.today(), bands, "inline-scene", {"source_type": "inline_payload", **payload.metadata})
-
-
-def scene_from_geotiff(water_body_id: str, path: str, requested_date: date | None = None) -> Scene:
-    file_path = Path(path)
-    if not file_path.is_file():
-        raise FileNotFoundError(f"GeoTIFF path does not exist: {path}")
-    with rasterio.open(file_path) as dataset:
-        if dataset.count < len(REQUIRED_BANDS):
-            raise ValueError(f"GeoTIFF must contain at least {len(REQUIRED_BANDS)} bands in {REQUIRED_BANDS} order")
-        bands = {name: dataset.read(index + 1).astype(float) for index, name in enumerate(DEFAULT_GEOTIFF_BANDS)}
-        tags = {str(key): str(value) for key, value in dataset.tags().items()}
-        metadata = {"source_type": "local_geotiff", "path": str(file_path), "width": dataset.width, "height": dataset.height, "count": dataset.count, "crs": str(dataset.crs) if dataset.crs else None, "transform": str(dataset.transform), "tags": tags}
-    acquisition = requested_date
-    raw_date = tags.get("ACQUISITION_DATE")
-    if acquisition is None and raw_date:
-        try:
-            acquisition = date.fromisoformat(raw_date[:10])
-        except ValueError:
-            acquisition = None
-    return Scene(water_body_id, acquisition or date.today(), bands, f"geotiff:{file_path}", {key: value for key, value in metadata.items() if value is not None})
-
-
-def _validate_bands(bands: Mapping[str, np.ndarray]) -> None:
-    missing = [band for band in REQUIRED_BANDS if band not in bands]
-    if missing:
-        raise ValueError(f"scene missing required bands: {', '.join(missing)}")
-    shapes = {np.asarray(array).shape for array in bands.values()}
-    if len(shapes) != 1 or next(iter(shapes)) == (0, 0) or any(np.asarray(array).ndim != 2 for array in bands.values()):
-        raise ValueError("all scene bands must be non-empty 2D arrays with the same shape")
-
-
-def fuse_environmental_signals(bands: Mapping[str, Any], rainfall: Iterable[float] | Mapping[str, Any] | None = None) -> dict[str, Any]:
-    """Fuse water-only spectral proxies with supplied rainfall observations."""
-    spectral = summarize_spectral_features(compute_spectral_features(bands))
-    rain = rainfall_features(rainfall)
-    pressure = float(np.clip((max(spectral.get("ndci", 0.0), 0.0) + rain["rainfall_pressure"]) / 2.0, 0.0, 1.0))
-    return {"spectral": spectral, "rainfall": rain, "fusion_score": pressure, "data_status": "observed" if rain["observations"] else "spectral_only"}
-
-
-def analyze(scene: Scene, observations: list[HABObservation], network: WaterNetwork | None = None, rainfall: Sequence[float] | Mapping[str, Any] | None = None) -> AnalyzeResponse:
-    mask, diagnostics = create_water_mask(scene.bands)
-    metrics: QualityMetrics = estimate_quality(scene.bands, mask)
-    if metrics.pixels_analyzed < MIN_ANALYZED_PIXELS:
-        raise ValueError(f"only {metrics.pixels_analyzed} valid water pixels analyzed; need at least {MIN_ANALYZED_PIXELS}")
-    risk = score_risk(metrics, observations)
-    explanation = build_explanation(metrics, risk, scene.acquisition_date, diagnostics, observations)
-    network_analysis = analyze_water_network(network).to_dict() if network is not None else None
-    fusion = fuse_environmental_signals(scene.bands, rainfall)
-    return AnalyzeResponse(scene_id="", water_body_id=scene.water_body_id, acquisition_date=scene.acquisition_date, risk=risk, quality=metrics.as_dict(), explanation=explanation, water_mask={**diagnostics, "pixels_in_mask": int(mask.sum()), "scene_pixels": int(mask.size)}, scene_metadata={**scene.metadata, "environmental_fusion": fusion}, network_analysis=network_analysis)
+IiIiU2NlbmUgbG9hZGluZyBhbmQgb3JjaGVzdHJhdGlvbiBmb3IgdGhlIGFu
+YWx5c2lzIHBpcGVsaW5lLiIiIgpmcm9tIF9fZnV0dXJlX18gaW1wb3J0IGFu
+bm90YXRpb25zCgpmcm9tIGRhdGFjbGFzc2VzIGltcG9ydCBkYXRhY2xhc3Ms
+IGZpZWxkCmZyb20gZGF0ZXRpbWUgaW1wb3J0IGRhdGUKZnJvbSBwYXRobGli
+IGltcG9ydCBQYXRoCmZyb20gdHlwaW5nIGltcG9ydCBBbnksIE1hcHBpbmcs
+IFNlcXVlbmNlCgppbXBvcnQgbnVtcHkgYXMgbnAKaW1wb3J0IHJhc3Rlcmlv
+Cgpmcm9tIGFwcC5leHBsYWluIGltcG9ydCBidWlsZF9leHBsYW5hdGlvbgpm
+cm9tIGFwcC5oYWJfcmlzayBpbXBvcnQgc2NvcmVfcmlzawpmcm9tIGFwcC5t
+b2RlbHMgaW1wb3J0IEFuYWx5emVSZXNwb25zZSwgSEFCT2JzZXJ2YXRpb24s
+IFNjZW5lUGF5bG9hZApmcm9tIGFwcC5uZXR3b3JrIGltcG9ydCBhbmFseXpl
+X3dhdGVyX25ldHdvcmsKZnJvbSBhcHAubmV0d29ya19tb2RlbHMgaW1wb3J0
+IFdhdGVyTmV0d29yawpmcm9tIGFwcC5yYWluZmFsbCBpbXBvcnQgcmFpbmZh
+bGxfZmVhdHVyZXMKZnJvbSBhcHAuc3BlY3RyYWxfZmVhdHVyZXMgaW1wb3J0
+IGNvbXB1dGVfc3BlY3RyYWxfZmVhdHVyZXMsIHN1bW1hcml6ZV9zcGVjdHJh
+bF9mZWF0dXJlcwpmcm9tIGFwcC53YXRlcl9tYXNraW5nIGltcG9ydCBjcmVh
+dGVfd2F0ZXJfbWFzawpmcm9tIGFwcC53YXRlcl9xdWFsaXR5IGltcG9ydCBR
+dWFsaXR5TWV0cmljcywgZXN0aW1hdGVfcXVhbGl0eQpmcm9tIGNvbmZpZyBp
+bXBvcnQgTUlOX0FOQUxZWkVEX1BJWEVMUwoKUkVRVUlSRURfQkFORFMgPSAo
+IkIwMiIsICJCMDMiLCAiQjA0IiwgIkIwNSIsICJCMDgiLCAiQjExIikKREVG
+QVVMVF9HRU9USUZGX0JBTkRTID0gUkVRVUlSRURfQkFORFMKCgpAZGF0YWNs
+YXNzKGZyb3plbj1UcnVlKQpjbGFzcyBTY2VuZToKICAgIHdhdGVyX2JvZHlf
+aWQ6IHN0cgogICAgYWNxdWlzaXRpb25fZGF0ZTogZGF0ZQogICAgYmFuZHM6
+IGRpY3Rbc3RyLCBucC5uZGFycmF5XQogICAgc291cmNlOiBzdHIKICAgIG1l
+dGFkYXRhOiBkaWN0W3N0ciwgQW55XSA9IGZpZWxkKGRlZmF1bHRfZmFjdG9y
+eT1kaWN0KQoKCmRlZiBzY2VuZV9mcm9tX3BheWxvYWQod2F0ZXJfYm9keV9p
+ZDogc3RyLCBwYXlsb2FkOiBTY2VuZVBheWxvYWQsIHJlcXVlc3RlZF9kYXRl
+OiBkYXRlIHwgTm9uZSkgLT4gU2NlbmU6CiAgICBiYW5kcyA9IHtuYW1lLnVw
+cGVyKCk6IG5wLmFzYXJyYXkodmFsdWVzLCBkdHlwZT1mbG9hdCkgZm9yIG5h
+bWUsIHZhbHVlcyBpbiBwYXlsb2FkLmJhbmRzLml0ZW1zKCl9CiAgICBfdmFs
+aWRhdGVfYmFuZHMoYmFuZHMpCiAgICByZXR1cm4gU2NlbmUod2F0ZXJfYm9k
+eV9pZCwgcmVxdWVzdGVkX2RhdGUgb3IgcGF5bG9hZC5hY3F1aXNpdGlvbl9k
+YXRlIG9yIGRhdGUudG9kYXkoKSwgYmFuZHMsICJpbmxpbmUtc2NlbmUiLCB7
+InNvdXJjZV90eXBlIjogImlubGluZV9wYXlsb2FkIiwgKipwYXlsb2FkLm1l
+dGFkYXRhfSkKClxubmRlZiBzY2VuZV9mcm9tX2dlb3RpZmYod2F0ZXJfYm9k
+eV9pZDogc3RyLCBwYXRoOiBzdHIsIHJlcXVlc3RlZF9kYXRlOiBkYXRlIHwg
+Tm9uZSA9IE5vbmUpIC0+IFNjZW5lOgogICAgZmlsZV9wYXRoID0gUGF0aChw
+YXRoKQogICAgaWYgbm90IGZpbGVfcGF0aC5pc19maWxlKCk6CiAgICAgICAg
+cmFpc2UgRmlsZU5vdEZvdW5kRXJyb3IoZiJHZW9USUZGIHBhdGggZG9lcyBu
+b3QgZXhpc3Q6IHtwYXRofSIpCiAgICB3aXRoIHJhc3RlcmlvLm9wZW4oZmls
+ZV9wYXRoKSBhcyBkYXRhc2V0OgogICAgICAgIGlmIGRhdGFzZXQuY291bnQgP
+CBsZW4oUkVRVUlSRURfQkFORFMpOgogICAgICAgICAgICByYWlzZSBWYWx1
+ZUVycm9yKGYiR2VvVElGRiBtdXN0IGNvbnRhaW4gYXQgbGVhc3Qge2xlbihS
+RVFVSVJFRF9CQU5EUyl9IGJhbmRzIGluIHtSRVFVSUVEF0JBTkRTfSBvcmRl
+ciIpCiAgICAgICAgYmFuZHMgPSB7bmFtZTogZGF0YXNldC5yZWFkKGluZGV4ICsgMSkuYXN0eXBlKGZsb2F0KSBmb3IgaW5kZXgsIG5hbWUgaW4gZW51bWVyYXRlKERFRkFVTFRfR0VPVElGRl9CQU5EUyl9CiAgICAgICAgdGFncyA9IHtzdHIoa2V5KTogc3RyKHZhbHVlKSBmb3Iga2V5LCB2YWx1ZSBpbiBkYXRhc2V0LnRhZ3MoKS5pdGVtcygpfQogICAgICAgIG1ldGFkYXRhID0geyJzb3VyY2VfdHlwZSI6ICJsb2NhbF9nZW90aWZmIiwgInBhdGgiOiBzdHIoZmlsZV9wYXRoKSwgIndpZHRoIjogZGF0YXNldC53aWR0aCwgImhlaWdodCI6IGRhdGFzZXQuaGVpZ2h0LCAiY291bnQiOiBkYXRhc2V0LmNvdW50LCAiY3JzIjogc3RyKGRhdGFzZXQuY3JzKSBpZiBkYXRhc2V0LmNycyBlbHNlIE5vbmUsICJ0cmFuc2Zvcm0iOiBzdHIoZGF0YXNldC50cmFuc2Zvcm0pLCAidGFncyI6IHRhZ3N9CiAgICAgICAgYWNxdWlzaXRpb24gPSByZXF1ZXN0ZWRfZGF0ZQogICAgICAgIHJhd19kYXRlID0gdGFncy5nZXQoIkFDUVVJU0lUSU9OX0RBVEUiKQogICAgICAgIGlmIGFjcXVpc2l0aW9uIGlzIE5vbmUgYW5kIHJhd19kYXRlOgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICBhY3F1aXNpdGlvbiA9IGRhdGUuZnJvbWlzb2Zvcm1hdChyYXdfZGF0ZVs6MTBdKQogICAgICAgICAgICBleGNlcHQgVmFsdWVFcnJvcjoKICAgICAgICAgICAgICAgIGFjcXVpc2l0aW9uID0gTm9uZQogICAgICAgIHJldHVybiBTY2VuZSh3YXRlcl9ib2R5X2lkLCBhY3F1aXNpdGlvbiBvciBkYXRlLnRvZGF5KCksIGJhbmRzLCBmImdlb3RpZmY6e2ZpbGVfcGF0aH0iLCB7a2V5OiB2YWx1ZSBmb3Iga2V5LCB2YWx1ZSBpbiBtZXRhZGF0YS5pdGVtcygpIGlmIHZhbHVlIGlzIG5vdCBOb25lfSkKClxuZGVmIF92YWxpZGF0ZV9iYW5kcyhiYW5kczogTWFwcGluZ1tzdHIsIG5wLm5kYXJyYXldKSAtPiBOb25lOgogICAgbWlzc2luZyA9IFtiYW5kIGZvciBiYW5kIGluIFJFUVVJUkVEX0JBTkRTIGlmIGJhbmQgbm90IGluIGJhbmRzXQogICAgaWYgbWlzc2luZzoKICAgICAgICByYWlzZSBWYWx1ZUVycm9yKGYic2NlbmUgbWlzc2luZyByZXF1aXJlZCBiYW5kczoge2MnLCAnIC5qb2luKG1pc3NpbmcpfSIpCiAgICBzaGFwZXMgPSB7bnAuYXNhcnJheShhcnJheSku c2hhcGUgZm9yIGFycmF5IGluIGJhbmRzLnZhbHVlcygpfQ==
