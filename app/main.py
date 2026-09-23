@@ -1,6 +1,8 @@
 """FastAPI entrypoint for Freshwater Sentinel."""
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any, Mapping
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
@@ -22,7 +24,7 @@ from app.models import (
     IngestResponse,
 )
 from app.network_routes import router as network_router
-from app.pipeline import Scene, analyze, scene_from_geotiff, scene_from_payload
+from app.pipeline import Pipeline, Scene, analyze, scene_from_geotiff, scene_from_payload
 from app.satellite import analyze_scene
 
 app = FastAPI(
@@ -34,6 +36,8 @@ app.include_router(network_router)
 app.include_router(field_task_router)
 SCENES: dict[str, Scene] = {}
 LATEST_BY_WATER_BODY: dict[str, AnalyzeResponse] = {}
+LATEST_PIPELINE_SIGNALS: dict[str, Any] = {}
+DEFAULT_EVENT_LOG = Path(__file__).resolve().parents[1] / "data" / "events.jsonl"
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -120,3 +124,66 @@ def eyes(tile: str, date: str) -> dict[str, object]:
         return analyze_scene(tile, date)
     except (FileNotFoundError, OSError, ValueError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/events")
+def pipeline_event(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Run the offline event pipeline from supplied or most recently supplied signals."""
+    request = dict(payload or {})
+    control_keys = {
+        "signals",
+        "latest_signals",
+        "inputs",
+        "threshold",
+        "mode",
+        "timestamp",
+        "event_id",
+        "evidence",
+        "registry_targets",
+        "suggested_action",
+    }
+    signals = request.get("signals")
+    if signals is None:
+        signals = request.get("latest_signals")
+    if signals is None:
+        signals = LATEST_PIPELINE_SIGNALS
+    if not signals:
+        signals = {key: value for key, value in request.items() if key not in control_keys}
+    if not signals:
+        raise HTTPException(status_code=422, detail="provide signals or a prior request with signals")
+    if isinstance(signals, Mapping):
+        LATEST_PIPELINE_SIGNALS.clear()
+        LATEST_PIPELINE_SIGNALS.update(signals)
+
+    inputs = request.get("inputs")
+    if not isinstance(inputs, Mapping):
+        inputs = {}
+    pipeline_inputs = dict(inputs)
+    for key in ("water_body_id", "water_point_id"):
+        if key in request and key not in pipeline_inputs:
+            pipeline_inputs[key] = request[key]
+
+    try:
+        return Pipeline(log_path=DEFAULT_EVENT_LOG).process(
+            signals,
+            threshold=float(request.get("threshold", 0.5)),
+            mode=str(request.get("mode", "any")),
+            timestamp=request.get("timestamp"),
+            event_id=request.get("event_id"),
+            inputs=pipeline_inputs,
+            evidence=request.get("evidence"),
+            registry_targets=request.get("registry_targets"),
+            suggested_action=request.get("suggested_action"),
+        )
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/replay/{event_id}")
+def replay_pipeline_event(event_id: str) -> dict[str, Any]:
+    """Replay the stable brief for an event persisted in the JSONL event log."""
+    try:
+        return Pipeline(log_path=DEFAULT_EVENT_LOG).replay(event_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
