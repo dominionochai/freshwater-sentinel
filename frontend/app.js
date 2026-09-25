@@ -1,135 +1,42 @@
-/* Offline-only controls for the parent dashboard. All data is bundled locally. */
-(() => {
-  const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const toast = (message) => {
-    const el = $('#toast');
-    if (!el) return;
-    el.textContent = message;
-    el.classList.add('show');
-    clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => el.classList.remove('show'), 2400);
-  };
-  const titles = { overview: 'Lake Malawi at a glance', signal: 'Water signal, unpacked', network: 'Network alert propagation', health: 'Water signal to human action' };
-
-  function wireNavigation() {
-    $$('.nav').forEach(button => button.addEventListener('click', () => {
-      const view = button.dataset.view;
-      $$('.nav').forEach(item => item.classList.toggle('active', item === button));
-      $$('[data-panel]').forEach(panel => {
-        const active = panel.dataset.panel === view;
-        panel.classList.toggle('visible', active);
-        panel.hidden = !active;
-      });
-      const heading = $('#title');
-      if (heading) heading.textContent = titles[view] || titles.overview;
-    }));
-  }
-
-  function wireSatelliteToggle() {
-    const image = $('img[src*="satellite-demo"], .satellite img, .map img');
-    if (!image) return;
-    const frame = image.closest('.satellite, .card') || image.parentElement;
-    const controls = document.createElement('div');
-    controls.className = 'local-scene-toggle';
-    controls.setAttribute('role', 'group');
-    controls.setAttribute('aria-label', 'Local satellite image mode');
-    controls.style.cssText = 'display:flex;gap:8px;margin:10px 0;flex-wrap:wrap';
-    const modes = [
-      ['natural', 'Natural color', 'assets/satellite-natural.png', 'assets/satellite-natural.svg'],
-      ['ir', 'Infrared / false color', 'assets/satellite-ir.png', 'assets/satellite-ir.svg']
-    ];
-    const select = (mode, button) => {
-      const [, label, png, fallback] = mode;
-      image.onerror = () => { image.onerror = null; image.src = fallback; };
-      image.src = png;
-      image.alt = `${label} local illustration of Lake Malawi near Salima`;
-      controls.querySelectorAll('button').forEach(item => {
-        const active = item === button;
-        item.setAttribute('aria-pressed', String(active));
-        item.style.cssText = `border:1px solid #b7e7e2;border-radius:4px;padding:8px 10px;cursor:pointer;font-weight:700;background:${active ? '#081a2b' : '#edf3f3'};color:${active ? '#fff' : '#426176'}`;
-      });
-    };
-    modes.forEach(mode => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = mode[1];
-      button.addEventListener('click', () => select(mode, button));
-      controls.append(button);
-    });
-    frame.insertAdjacentElement('afterend', controls);
-    const caption = document.createElement('p');
-    caption.className = 'local-place-label';
-    caption.textContent = 'Lake Malawi · Salima District, Malawi — illustrative, offline scene';
-    caption.style.cssText = 'margin:6px 0;color:#426176;font-size:12px';
-    controls.insertAdjacentElement('afterend', caption);
-    select(modes[0], controls.querySelector('button'));
-  }
-
-  function labelRealPlaces() {
-    const replacements = [['Demo Lake', 'Lake Malawi (Salima District)'], ['Khaoleya', 'Salima'], ['Chisomo', 'Nkhotakota'], ['Matope', 'Mangochi']];
-    const walk = () => {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let node;
-      while ((node = walker.nextNode())) {
-        if (!node.parentElement || /^(SCRIPT|STYLE)$/.test(node.parentElement.tagName)) continue;
-        let text = node.nodeValue;
-        replacements.forEach(([from, to]) => { text = text.replaceAll(from, to); });
-        if (text !== node.nodeValue) node.nodeValue = text;
-      }
-    };
-    walk();
-    new MutationObserver(walk).observe(document.body, { childList: true, subtree: true, characterData: true });
-  }
-
-  function addNetworkRiskMarkers() {
-    const svg = $('.network .map svg, [data-panel="network"] .map svg');
-    if (!svg || svg.querySelector('.offline-risk-markers')) return;
-    const ns = 'http://www.w3.org/2000/svg';
-    const group = document.createElementNS(ns, 'g');
-    group.setAttribute('class', 'offline-risk-markers');
-    group.setAttribute('aria-label', 'Red screening risk markers: Salima source and downstream locations');
-    [[360, 78, 'Salima · flagged source'], [120, 174, 'Nkhotakota · exposed'], [360, 174, 'Salima · exposed'], [600, 174, 'Mangochi · exposed']].forEach(([x, y, label]) => {
-      const marker = document.createElementNS(ns, 'circle');
-      marker.setAttribute('cx', x); marker.setAttribute('cy', y); marker.setAttribute('r', 8);
-      marker.setAttribute('fill', '#dc2626'); marker.setAttribute('stroke', '#fff'); marker.setAttribute('stroke-width', 3);
-      marker.setAttribute('aria-label', `Red risk marker: ${label}`);
-      group.append(marker);
-    });
-    svg.append(group);
-  }
-
-  function wireLocalControls() {
-    $('#refresh')?.addEventListener('click', () => toast('Offline demo is already current.'));
-    $('#help')?.addEventListener('click', () => toast('Choose a dashboard view, switch the local satellite image, or run the offline network preview.'));
-    $('#language')?.addEventListener('click', event => {
-      const button = event.currentTarget;
-      button.textContent = button.textContent.includes('SW') ? 'EN / SW' : 'SW / EN';
-      toast('Language control updated locally; no message was sent.');
-    });
-    $('#alert-action')?.addEventListener('click', () => toast('Use a verified-safe source and contact local authorities.'));
-    $('#share')?.addEventListener('click', () => toast('Local field note ready to share; nothing was sent.'));
-    $$('.task input[type="checkbox"]').forEach(box => box.addEventListener('change', () => {
-      const row = box.closest('.task');
-      row?.classList.toggle('done', box.checked);
-      const state = $('.task-state', row);
-      if (state) state.textContent = box.checked ? 'DONE' : 'PENDING';
-    }));
-    $('#network-demo')?.addEventListener('click', () => {
-      addNetworkRiskMarkers();
-      toast('Offline network preview: red screening markers shown; field sample still required.');
-    });
-    $('#demo-run')?.addEventListener('click', () => toast('Offline presenter controls are ready.'));
-    $('#next-beat')?.addEventListener('click', () => toast('Explore the next dashboard view from the sidebar.'));
-  }
-
-  function init() {
-    wireNavigation();
-    wireLocalControls();
-    labelRealPlaces();
-    wireSatelliteToggle();
-    addNetworkRiskMarkers();
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
-  else init();
-})();
+/* Dependency-free field demo. Set USE_LIVE_API to true to opt into the documented API. */
+const USE_LIVE_API = false;
+const API_BASE = "";
+const DEMO_DATA = {
+  scene_id: "scene_0123456789abcdef",
+  water_body_id: "demo-lake",
+  source: "offline satellite scene",
+  acquisition_date: "2026-09-22",
+  risk: { activity: { score: 0.82, label: "red" }, district: "Demo District", before_cases: true, evidence: "thin" },
+  quality: { pixels_analyzed: 4096, water_coverage: 1, turbidity_ntu: 69.2857, chlorophyll_a_ug_l: 60.4545, quality_uncertainty: 0.125, ndci_mean: 0.30131 },
+  rainfall_mm_7d: 78,
+  cholera_history: { linked_cases: 2, window: "90 days", source: "district surveillance" },
+  explanation: { summary: "A fresh Sentinel-2 false-color scene finds a bloom anomaly before cases move.", band_signals: [{ band: "B02", signal: "blue water response" }, { band: "B03", signal: "green water response" }, { band: "B04", signal: "red bloom response" }, { band: "B05", signal: "red-edge spike" }] },
+  alerts: { en: { severity: "red", title: "Water watch: high concern", message: "A high harmful-algal-bloom screening signal was detected for Demo Lake. Do not swim, drink untreated water, or harvest food from the affected water.", action: "Keep people and animals away and contact the local health or water authority for confirmation." }, sw: { severity: "red", title: "Uangalizi wa maji: hatari kubwa", message: "Ishara kubwa ya mwani hatari imegunduliwa katika Demo Lake. Usiogelee, usinywe maji yasiyotibiwa, wala usivune chakula kutoka maji haya.", action: "Waweke watu na wanyama mbali na maji hayo na wasiliana na mamlaka ya afya au maji." } }
+};
+const NETWORK_DEMO = { anomaly: "Khaoleya borehole 4", settlements: ["Khaoleya", "Chisomo", "Matope"], alternatives: [{ name: "Chisomo borehole", distance_km: 2, safety_state: "VERIFIED-SAFE", evidence: "registry + recent sample" }, { name: "Matope protected spring", distance_km: 4, safety_state: "VERIFIED-SAFE", evidence: "two clean visits" }] };
+const PRESENTER_BEATS = [
+  { id: "eyes", label: "EYES", title: "Open with the fresh Sentinel-2 scene", copy: "Start with the evidence: a prominent false-color image and water mask make the satellite signal visible before any interpretation.", body: () => `<div class="payload"><small>SATELLITE / FRESH ACQUISITION</small><strong>Sentinel-2 false-color + water mask</strong><div class="satellite"><img src="assets/satellite-demo.svg" alt="Fresh Sentinel-2 false-color water scene with water mask"><b>S2 / 22 SEP / 100% WATER COVERAGE</b><i class="pin one"></i><i class="pin two"></i></div></div><div class="callout"><strong>OPENING SIGNAL</strong><br>Red-edge bloom response is visible inside the water mask. This is a screening proxy, not a lab result.</div>` },
+  { id: "brain", label: "BRAIN", title: "Risk rises before cases", copy: "Fuse satellite evidence, cholera history and rainfall into a district score. Show the rise first; cases are a lagging check.", body: () => `<div class="metrics"><article><small>DISTRICT RISK</small><strong>0.82</strong><span>from 0.61 <i>rising</i></span></article><article><small>SATELLITE</small><strong>0.74</strong><span>red-edge anomaly</span></article><article><small>RAIN 7D</small><strong>78<em> mm</em></strong><span>catchment wetness</span></article><article><small>CASES</small><strong>2</strong><span>lagged history</span></article></div><div class="callout"><strong>FIELD SAMPLE REQUIRED</strong><br>Evidence is thin: hold escalation until a source/sample is verified. The model rises before cases; it does not claim causality.</div>` },
+  { id: "voice", label: "VOICE", title: "Reach people in their language", copy: "Turn the same alert into an English SMS, a Swahili SMS and a Chichewa call-in script without requiring connectivity.", body: () => `<div class="voice-grid"><div class="payload"><small>EN SMS</small><strong>DEMO LAKE WATER WATCH</strong><p>High harmful-algal-bloom signal. Do not swim, drink untreated water, or harvest food. Await field confirmation.</p></div><div class="payload"><small>SWAHILI SMS</small><strong>TAHADHARI YA MAJI - DEMO LAKE</strong><p>Ishara ya mwani hatari imeonekana. Usiogelee, usinywe maji yasiyotibiwa, wala usivune chakula. Subiri uthibitisho wa uwanjani.</p></div></div><div class="callout"><strong>CHICHEWA CALL-IN / CHIPATALA CHA PA FONI</strong><br>Moni, Chipatala Cha Pa Foni. Tikulandilira chenjezo la madzi ku Demo Lake. Kodi pali odwala otsegula m'mimba kapena kusanza? Chonde nenani mudzi ndi nthawi; musamwe madzi osayeretsedwa.</div>` },
+  { id: "network", label: "NETWORK", title: "Trace the borehole and keep the decision visible", copy: "Show the anomaly at a borehole, affected settlements and ranked verified-safe alternatives. The network ends with one clear place to act.", body: () => `<div class="network-panel" data-state="ready"><strong>&#8767;</strong><div><b>ANOMALY AT KHAOLEYA BOREHOLE 4</b><p>Downstream exposure reaches Khaoleya, Chisomo and Matope.</p></div></div><div class="payload"><small>RANKED ALTERNATIVES</small><strong>1. Chisomo borehole - VERIFIED-SAFE - 2 km</strong><p>Registry match + recent clean sample.</p><strong>2. Matope protected spring - VERIFIED-SAFE - 4 km</strong><p>Two clean visits; use while source is sampled.</p></div><div class="callout"><strong>DECISION / ACT HERE &rarr;</strong><br>Route drinking-water collection to the top verified-safe alternative while Khaoleya is sampled.</div>` },
+  { id: "sentinel", label: "SENTINEL", title: "Highlight what was previously unseen", copy: "The sentinel is not repeating a known label: it flags a new anomaly against the local baseline and makes novelty explicit.", body: () => `<div class="payload"><small>ANOMALY DETECTION / NOVELTY HIGHLIGHT</small><strong>PREVIOUSLY UNSEEN PATTERN</strong><p>Red-edge + turbidity combination is outside the Demo Lake baseline window. No matching anomaly is present in prior local scenes.</p><div class="chip red">NEW SINCE LAST SCENE</div></div><div class="callout"><strong>SENTINEL SIGNAL</strong><br>Novelty triggers verification, not automatic closure or diagnosis. Keep the evidence gate visible.</div>` },
+  { id: "hands", label: "HANDS", title: "Move the field queue from pending to done", copy: "One response team takes three explicit tasks: verify the source, sample the suspect, then confirm the alternative.", body: () => `<div class="queue"><div class="row"><span><b>01</b> Verify source</span><label class="chip queue-status pending">PENDING</label></div><div class="row"><span><b>02</b> Sample suspect</span><label class="chip queue-status in-progress">IN-PROGRESS</label></div><div class="row"><span><b>03</b> Confirm alternative</span><label class="chip queue-status done">DONE</label></div></div><div class="callout"><strong>FIELD RESPONSE</strong><br>Statuses are explicit: pending &rarr; in-progress &rarr; done. The suspect remains a proxy until the sample result arrives.</div>` },
+  { id: "memory", label: "MEMORY", title: "Ground the alert in a WPdx-style registry", copy: "Use the water-point registry to connect the alert to infrastructure and the measurements that make a safe alternative actionable.", body: () => `<div class="payload"><small>WPdx-STYLE WATER-POINT REGISTRY</small><strong>KHAOLEYА BOREHOLE 4</strong><p>Water point ID: WP-ML-KH-004 &middot; source type: borehole &middot; district: Demo</p><div class="metrics compact"><article><small>TURBIDITY</small><strong>0.1<em> NTU</em></strong></article><article><small>FAECAL COLIFORMS</small><strong>0<em> CFU/100mL</em></strong></article><article><small>STATUS</small><strong>ACTIVE</strong></article></div></div><div class="callout"><strong>MEMORY MATCH</strong><br>Registry history preserves the point, its sample measurements and the verified-safe alternative used for the decision.</div>` },
+  { id: "verify", label: "VERIFY", title: "Close the loop over the following weeks", copy: "Show alert, action and follow-up as one timeline. A HIT with three weeks of lead time feeds the outcome back into scoring.", body: () => `<div class="timeline"><div class="timeline-card"><small>ALERT</small><strong>22 SEP / screening signal</strong><p>Alert issued; community message and field queue opened.</p></div><div class="timeline-card"><small>ACTION</small><strong>Same day / verified-safe route</strong><p>Source verification, suspect sample and alternative confirmation completed.</p></div><div class="timeline-card hit"><small>FOLLOWING WEEKS</small><strong>HIT / lead time 3 weeks</strong><p>Observed outcome matched the warning early enough for action.</p></div></div><div class="risk-feedback"><strong>MEMORY 2.0 &rarr; risk scoring</strong><br>Verified HIT + 3-week lead time is recorded and feeds back into the next district risk score.</div>` }
+];
+let language = "en", beatIndex = 0, presenterStarted = false, networkStep = 0;
+const $ = selector => document.querySelector(selector);
+const $$ = selector => document.querySelectorAll(selector);
+function toast(message) { const el = $("#toast"); el.textContent = message; el.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove("show"), 2800); }
+function render(data = DEMO_DATA) { const alert = data.alerts[language]; $("#alert-title").textContent = alert.title; $("#alert-message").textContent = alert.message; $("#action-copy").textContent = alert.action; $("#source").textContent = data.source; $("#risk").textContent = Number(data.risk.activity.score).toFixed(2); $("#date").textContent = new Date(`${data.acquisition_date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).toUpperCase(); $("#connection").className = `status ${USE_LIVE_API ? "live" : "offline"}`; $("#connection").innerHTML = `<i></i> ${USE_LIVE_API ? "Live API" : "Offline demo"}`; }
+function selectView(view) { $$(".nav").forEach(button => button.classList.toggle("active", button.dataset.view === view)); $$(".view").forEach(panel => { const on = panel.dataset.panel === view; panel.classList.toggle("visible", on); panel.hidden = !on; }); const titles = { overview: "Demo Lake at a glance", signal: "Water signal, unpacked", network: "Network alert propagation", health: "Water signal to human action" }; $("#title").textContent = titles[view] || titles.overview; }
+function renderBeat() { const beat = PRESENTER_BEATS[beatIndex]; $("#presenter-flow").hidden = false; $("#beat-counter").textContent = `BEAT ${beatIndex + 1} / ${PRESENTER_BEATS.length}`; $("#beat-panel").innerHTML = `<small>${beat.label}</small><h3>${beat.title}</h3><p class="beat-copy">${beat.copy}</p>${beat.body()}`; $("#next-beat").textContent = beatIndex === PRESENTER_BEATS.length - 1 ? "Restart beat 1 ↺" : "Next beat →"; }
+function startPresenter() { presenterStarted = true; beatIndex = 0; selectView("overview"); renderBeat(); $("#demo-run").textContent = "RESTART 8-BEAT DEMO"; $("#presenter-flow").scrollIntoView({ behavior: "smooth", block: "start" }); }
+function nextBeat() { if (!presenterStarted) startPresenter(); else { beatIndex = (beatIndex + 1) % PRESENTER_BEATS.length; renderBeat(); } }
+function renderNetwork(state, detail = "") { const panel = $("#network-panel"), result = $("#network-result"); panel.dataset.state = state; result.hidden = state !== "ready"; const copy = { idle: ["Ready when you are", "Run the preview to map the anomaly, affected settlements and safer alternatives."], loading: ["Building network…", "POST /network/build then POST /network/analyze"], ready: ["Propagation found", "One borehole anomaly reaches three settlements; two verified-safe alternatives are ranked."], error: ["Network unavailable", detail || "Offline demo records remain available."] }; $("#network-title").textContent = copy[state][0]; $("#network-copy").textContent = copy[state][1]; if (state === "ready") result.innerHTML = `<div class="result-block"><b>ANOMALY</b><ul><li>${NETWORK_DEMO.anomaly}</li><li>Affected: ${NETWORK_DEMO.settlements.join(", ")}</li></ul></div><div class="result-block"><b>DECISION / ACT HERE →</b><ul>${NETWORK_DEMO.alternatives.map((item, index) => `<li>${index + 1}. ${item.name} - ${item.safety_state} - ${item.distance_km} km</li>`).join("")}</ul></div>`; }
+async function runNetwork() { renderNetwork("loading"); await new Promise(resolve => setTimeout(resolve, 350)); if (USE_LIVE_API) { try { await liveJson("/network/build", { method: "POST", body: JSON.stringify({ records: [], max_distance_km: 10 }) }); await liveJson("/network/analyze", { method: "POST", body: JSON.stringify({ network_id: "network-demo-lake-1" }) }); } catch (error) { renderNetwork("error", error.message); return; } } renderNetwork("ready"); }
+async function liveJson(path, options = {}) { const response = await fetch(`${API_BASE}${path}`, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } }); if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }
+async function loadData() { if (!USE_LIVE_API) return DEMO_DATA; try { return await liveJson("/risk/demo-lake"); } catch (error) { toast(`Live API unavailable (${error.message}); showing the offline demo.`); return DEMO_DATA; } }
+function queueMarkup() { return ["Verify source", "Sample suspect", "Confirm alternative"].map((task, index) => `<div class="row"><span><b>${String(index + 1).padStart(2, "0")}</b> ${task}</span><label class="chip queue-status">PENDING</label></div>`).join(""); }
+function init() { render(); selectView("overview"); $$(".nav").forEach(button => button.addEventListener("click", () => selectView(button.dataset.view))); $("#language").addEventListener("click", () => { language = language === "en" ? "sw" : "en"; render(); toast(language === "sw" ? "Swahili alert copy selected." : "English alert copy selected."); }); $("#refresh").addEventListener("click", async () => { render(await loadData()); toast(USE_LIVE_API ? "Live analysis refreshed." : "Offline demo is already current."); }); $("#demo-run").addEventListener("click", startPresenter); $("#next-beat").addEventListener("click", nextBeat); $("#network-demo").addEventListener("click", runNetwork); $("#help").addEventListener("click", () => toast("Start the 8-beat demo, then advance one beat at a time.")); $("#alert-action").addEventListener("click", () => toast(DEMO_DATA.alerts[language].action)); $("#share").addEventListener("click", () => toast("Field note copied: keep people and animals away; confirm locally.")); }
+document.addEventListener("DOMContentLoaded", init);
