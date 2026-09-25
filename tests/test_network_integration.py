@@ -14,7 +14,7 @@ def test_pipeline_without_network_preserves_existing_response_shape():
         "B08": np.full((20, 20), 0.12, dtype=float),
         "B11": np.full((20, 20), 0.05, dtype=float),
     }
-    result = analyze(Scene("lake-1", __import__("datetime").date.today(), bands, "test"), [])
+    result = analyze(Scene("lake-1", __import__("datetime").date.today(), bands, tile="test"), [])
     assert result.network_analysis is None
 
 

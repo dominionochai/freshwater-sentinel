@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Sentinel-2 L2A preview and spectral-index helpers.
 
 The downloader deliberately makes no pixel claims when the preview or JP2 assets
@@ -155,3 +156,31 @@ def analyze_scene(tile: str, scene_date: str | date | datetime, *, item_id: str 
 fetch_sentinel_preview = fetch_preview
 analyze_sentinel_scene = analyze_scene
 __all__ = ["analyze_scene", "analyze_sentinel_scene", "band_urls", "compute_indices", "fetch_preview", "fetch_sentinel_preview", "preview_urls", "summarize_ndwi"]
+=======
+
+def analyze_scene(tile: str, date: str) -> dict[str, object]:
+    """Serve the cached Sentinel-2 scene rendered by
+    scripts/render_eyes_false_color.py for the EYES screen.
+
+    NOTE: reconstructed -- analyze_scene was missing from the handoff.
+    The render script does not index its output by tile/date (it always
+    overwrites the same demo files), so tile/date are accepted for API
+    shape compatibility but not used to select a scene. This always
+    serves whatever is currently cached in data/. Flag for review.
+    """
+    import json
+    from pathlib import Path
+
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+    meta_path = data_dir / "eyes_false_color_demo.json"
+
+    if not meta_path.exists():
+        raise FileNotFoundError(
+            "no cached scene found -- run scripts/render_eyes_false_color.py first"
+        )
+
+    metadata = json.loads(meta_path.read_text())
+    metadata["requested_tile"] = tile
+    metadata["requested_date"] = date
+    return metadata
+>>>>>>> 786ed27 (fix: backend bug fixes)

@@ -24,6 +24,12 @@ from app.models import (
     IngestResponse,
 )
 from app.network_routes import router as network_router
+<<<<<<< HEAD
+=======
+from app.forecast_routes import router as forecast_router
+from app.voice_routes import router as voice_router
+from app.verify_routes import router as verify_router
+>>>>>>> 786ed27 (fix: backend bug fixes)
 from app.pipeline import Pipeline, Scene, analyze, scene_from_geotiff, scene_from_payload
 from app.satellite import analyze_scene
 
@@ -33,7 +39,10 @@ app = FastAPI(
     description="Water-only multispectral screening with explainable activity risk.",
 )
 app.include_router(network_router)
+app.include_router(forecast_router)
 app.include_router(field_task_router)
+app.include_router(voice_router)
+app.include_router(verify_router)
 SCENES: dict[str, Scene] = {}
 LATEST_BY_WATER_BODY: dict[str, AnalyzeResponse] = {}
 LATEST_PIPELINE_SIGNALS: dict[str, Any] = {}

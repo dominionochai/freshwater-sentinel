@@ -7,8 +7,9 @@ from typing import Any, Mapping, Sequence
 import httpx
 import numpy as np
 import rasterio
+from rasterio.enums import Resampling
 
-from app.pipeline import REQUIRED_BANDS, Scene
+from app.pipeline import Scene
 
 EARTH_SEARCH_URL = "https://earth-search.aws.element84.com/v1"
 DEFAULT_COLLECTION = "sentinel-2-l2a"
@@ -20,6 +21,7 @@ BAND_ASSET_KEYS: dict[str, tuple[str, ...]] = {
     "B08": ("B08", "nir"),
     "B11": ("B11", "swir16", "swir-16"),
 }
+REQUIRED_BANDS: tuple[str, ...] = tuple(BAND_ASSET_KEYS.keys())
 
 
 class EarthSearchError(RuntimeError):
@@ -126,7 +128,12 @@ def _scene_metadata(item: Mapping[str, Any], hrefs: Mapping[str, str], endpoint:
 def scene_from_stac_item(
     item: Mapping[str, Any], *, water_body_id: str, endpoint: str = EARTH_SEARCH_URL
 ) -> Scene:
-    """Open all six required Sentinel-2 COGs referenced by one real item."""
+    """Open all six required Sentinel-2 COGs referenced by one real item.
+
+    Bands are native to different resolutions (B02/B03/B04/B08 at 10m,
+    B05/B11 at 20m). Lower-resolution bands are bilinearly resampled up
+    to the highest-resolution band's grid so all arrays share one shape.
+    """
     if item.get("type") not in (None, "Feature"):
         raise EarthSearchError("STAC payload is not a Feature item")
     item_id = item.get("id")
@@ -134,10 +141,21 @@ def scene_from_stac_item(
         raise EarthSearchError("STAC item has no id")
     hrefs = _asset_hrefs(item)
     arrays: dict[str, np.ndarray] = {}
+    MAX_DIM = 1536  # cap read resolution; COG overviews make this a fast partial read
     try:
-        for band in REQUIRED_BANDS:
-            with rasterio.open(hrefs[band]) as dataset:
-                arrays[band] = dataset.read(1).astype(np.float32, copy=False)
+        datasets = {band: rasterio.open(hrefs[band]) for band in REQUIRED_BANDS}
+        try:
+            native_shapes = {band: (ds.height, ds.width) for band, ds in datasets.items()}
+            largest = max(native_shapes.values(), key=lambda shape: shape[0] * shape[1])
+            scale = min(1.0, MAX_DIM / max(largest))
+            target_shape = (max(1, int(largest[0] * scale)), max(1, int(largest[1] * scale)))
+            for band, dataset in datasets.items():
+                arrays[band] = dataset.read(
+                    1, out_shape=target_shape, resampling=Resampling.bilinear
+                ).astype(np.float32, copy=False)
+        finally:
+            for dataset in datasets.values():
+                dataset.close()
     except (rasterio.errors.RasterioError, OSError, ValueError) as exc:
         raise EarthSearchError(f"Unable to read COG assets for {item_id}: {exc}") from exc
     shapes = {array.shape for array in arrays.values()}

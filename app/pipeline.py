@@ -21,6 +21,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 @dataclass(frozen=True)
 class Scene:
+<<<<<<< HEAD
     """A local scene accepted by the existing API endpoints.
 
     ``bands`` contains already loaded arrays/lists.  No downloader is used by
@@ -31,6 +32,13 @@ class Scene:
     acquisition_date: date | None = None
     bands: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
+=======
+    water_body_id: str
+    acquisition_date: date
+    bands: dict[str, np.ndarray]
+    source: str = "unknown"
+    metadata: dict[str, Any] = field(default_factory=dict)
+>>>>>>> 786ed27 (fix: backend bug fixes)
     tile: str | None = None
 
 
@@ -119,6 +127,7 @@ def scene_from_geotiff(
     )
 
 
+<<<<<<< HEAD
 def _numbers(value: Any) -> list[float]:
     if isinstance(value, bool):
         return []
@@ -488,3 +497,100 @@ __all__ = [
     "create_event", "append_event", "emit_event", "record_event", "replay",
     "replay_event", "event_brief", "Pipeline", "SentinelPipeline",
 ]
+=======
+def analyze(scene: Scene, observations: list[HABObservation], network: WaterNetwork | None = None, rainfall: Sequence[float] | Mapping[str, Any] | None = None) -> AnalyzeResponse:
+    mask, diagnostics = create_water_mask(scene.bands)
+    metrics: QualityMetrics = estimate_quality(scene.bands, mask)
+    if metrics.pixels_analyzed < MIN_ANALYZED_PIXELS:
+        raise ValueError(f"only {metrics.pixels_analyzed} valid water pixels analyzed; need at least {MIN_ANALYZED_PIXELS}")
+    risk = score_risk(metrics, observations)
+    explanation = build_explanation(metrics, risk, scene.acquisition_date, diagnostics, observations)
+    network_analysis = analyze_water_network(network).to_dict() if network is not None else None
+    fusion = fuse_environmental_signals(scene.bands, rainfall)
+    return AnalyzeResponse(scene_id="", water_body_id=scene.water_body_id, acquisition_date=scene.acquisition_date, risk=risk, quality=metrics.as_dict(), explanation=explanation, water_mask={**diagnostics, "pixels_in_mask": int(mask.sum()), "scene_pixels": int(mask.size)}, scene_metadata={**scene.metadata, "environmental_fusion": fusion}, network_analysis=network_analysis)
+
+class Pipeline:
+    """Offline event pipeline: turns raw signals into a risk brief and
+    persists/replays it via a JSONL event log.
+
+    NOTE: reconstructed from how app/main.py calls it (Pipeline was missing
+    from the handoff). The trigger logic (mode='any'/'all' vs threshold) is
+    a best guess -- verify against the real demo semantics before relying on it.
+    """
+
+    def __init__(self, log_path):
+        from pathlib import Path
+        self.log_path = Path(log_path)
+
+    def process(
+        self,
+        signals,
+        *,
+        threshold: float = 0.5,
+        mode: str = "any",
+        timestamp=None,
+        event_id=None,
+        inputs=None,
+        evidence=None,
+        registry_targets=None,
+        suggested_action=None,
+    ) -> dict:
+        import json
+        from datetime import datetime, timezone
+        from uuid import uuid4
+
+        if not isinstance(signals, dict):
+            raise TypeError("signals must be a mapping of signal name -> numeric value")
+
+        values = []
+        for v in signals.values():
+            try:
+                values.append(float(v))
+            except (TypeError, ValueError):
+                raise ValueError(f"non-numeric signal value: {v!r}")
+
+        if mode == "all":
+            triggered = bool(values) and all(v >= threshold for v in values)
+        elif mode == "any":
+            triggered = any(v >= threshold for v in values)
+        else:
+            raise ValueError(f"unknown mode: {mode!r}")
+
+        record = {
+            "event_id": event_id or str(uuid4()),
+            "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
+            "signals": signals,
+            "threshold": threshold,
+            "mode": mode,
+            "triggered": triggered,
+            "risk_level": "RED" if triggered else "GREEN",
+            "inputs": inputs or {},
+            "evidence": evidence,
+            "registry_targets": registry_targets,
+            "suggested_action": suggested_action,
+        }
+
+        self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.log_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+
+        return record
+
+    def replay(self, event_id: str) -> dict:
+        import json
+
+        if not self.log_path.exists():
+            raise KeyError(event_id)
+
+        with self.log_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                record = json.loads(line)
+                if record.get("event_id") == event_id:
+                    return record
+
+        raise KeyError(event_id)
+
+>>>>>>> 786ed27 (fix: backend bug fixes)

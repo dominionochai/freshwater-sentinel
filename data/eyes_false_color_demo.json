@@ -1,0 +1,25 @@
+{
+  "item_id": "local-sample-scene",
+  "acquisition_datetime": "2026-09-25T11:43:33.491316+00:00",
+  "cloud_cover_pct": 0.0,
+  "platform": "synthetic-demo",
+  "bbox": null,
+  "views": {
+    "true_color": {
+      "file": "eyes_true_color_demo.png",
+      "bands": "B04->R, B03->G, B02->B",
+      "label": "True color -- what the human eye would see"
+    },
+    "false_color": {
+      "file": "eyes_false_color_demo.png",
+      "bands": "B08->R, B04->G, B03->B",
+      "label": "False color (NIR) -- vegetation and bloom signal, invisible to the eye"
+    },
+    "nir": {
+      "file": "eyes_nir_demo.png",
+      "bands": "B08 (842nm) grayscale",
+      "label": "Raw near-infrared, 842nm -- a single band the eye cannot perceive at all"
+    }
+  },
+  "caption": "Synthetic sample scene, generated 2026-09-25 -- local fallback, not a live or real satellite fetch"
+}
