@@ -1,36 +1,135 @@
-/* Offline-only Freshwater Sentinel demo. All records and artwork are local fixtures. */
+/* Offline-only controls for the parent dashboard. All data is bundled locally. */
 (() => {
-  const $ = (s, root = document) => root.querySelector(s);
-  const nav = $('.sidebar nav');
-  const main = $('#main');
-  const menu = [['eyes','EYES'],['brain','BRAIN'],['network','NETWORK'],['voice','VOICE'],['hands','HANDS'],['verify','VERIFY']];
-  nav.innerHTML = menu.map(([id,label],i) => `<button class="nav${i===0?' active':''}" type="button" data-view="${id}"${i===0?' aria-current="page"':''}>${['◉','◈','⌘','◍','✓','◎'][i]} &nbsp; ${label}</button>`).join('');
-  const style = document.createElement('style');
-  style.textContent = `
-  .demo-intro{max-width:780px;margin:0 0 18px;color:#426176;font-size:13px;line-height:1.6}.demo-grid,.voice-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(250px,.8fr);gap:16px;align-items:start}.demo-card{padding:20px;background:#fff;border:1px solid var(--line);border-radius:5px;box-shadow:0 16px 40px #081a2b14}.demo-card h3{margin:6px 0 10px;font-size:18px}.demo-card p{color:#426176;font-size:12px;line-height:1.55}.kicker{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.14em}.demo-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.demo-metric{padding:13px;background:#fff;border:1px solid var(--line);border-radius:4px}.demo-metric small{display:block;color:var(--muted);font-size:9px;font-weight:800}.demo-metric strong{display:block;margin:8px 0 4px;font-size:23px}.demo-metric span,.demo-small{color:#426176;font-size:11px}.scene{position:relative;overflow:hidden;border-radius:4px;background:#a6bd91}.scene svg{display:block;width:100%;height:auto}.false-scene{display:none}.scene.false .natural-scene{display:none}.scene.false .false-scene{display:inline}.scene-cap{position:absolute;left:10px;bottom:10px;padding:6px 8px;background:#081a2bd9;color:white;font-size:9px;font-weight:800;letter-spacing:.1em}.switch{display:flex;gap:4px;margin-top:11px;padding:4px;background:#edf3f3;width:max-content;border-radius:4px}.switch button{border:0;padding:8px 10px;background:transparent;color:#426176;font:inherit;font-size:10px;font-weight:800;cursor:pointer}.switch button[aria-pressed=true]{background:#081a2b;color:#fff}.demo-list{display:grid;gap:0;margin:12px 0 0;padding:0;list-style:none}.demo-list li{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);color:#426176;font-size:11px}.demo-list b{color:var(--ink);text-align:right}.gate,.demo-note{margin-top:12px;padding:12px;border-left:3px solid var(--amber);background:var(--amber-pale);color:#426176;font-size:11px;line-height:1.5}.gate{display:inline-block;margin:0 0 4px;font-weight:900;letter-spacing:.08em}.map{padding:8px;background:#f4f8f7;border:1px solid var(--line);border-radius:4px}.map svg{display:block;width:100%;height:auto}.map-legend{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0;color:#426176;font-size:10px}.alt{margin-top:9px;padding:11px;border:1px solid #b7e7e2;border-left:3px solid var(--teal);background:#f3fbfa;color:#426176;font-size:11px;line-height:1.45}.alt b{display:block;color:var(--ink)}.voice-panels{display:grid;gap:10px}.language{padding:13px;border:1px solid var(--line);border-radius:4px;background:#fff}.language small{color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.1em}.language b{display:block;margin-top:6px;color:var(--ink);font-size:11px}.language p{margin:7px 0 0}.phone-wrap{display:grid;place-items:center;padding:14px;background:#eaf2f2;border-radius:5px}.phone{width:min(245px,100%);padding:9px;border:5px solid #081a2b;border-radius:27px;background:#081a2b}.phone-screen{min-height:285px;padding:13px 11px;border-radius:17px;background:#f4f8f7}.notch{width:60px;height:7px;margin:-7px auto 12px;border-radius:0 0 8px 8px;background:#081a2b}.sms{margin-top:20px;padding:12px;border-radius:12px 12px 12px 3px;background:white;color:#426176;font-size:10px;line-height:1.5}.sms b{display:block;margin-bottom:6px;color:#081a2b}.tasks{display:grid;gap:9px;margin:14px 0 0;padding:0;list-style:none}.task{display:flex;align-items:flex-start;gap:10px;padding:13px;border:1px solid var(--line);border-radius:4px;background:white}.task input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--teal)}.task label{flex:1;color:var(--ink);font-size:12px;font-weight:800;cursor:pointer}.task label small{display:block;margin-top:4px;color:#426176;font-size:10px;font-weight:400}.task-state{padding:5px 7px;border-radius:3px;background:#f4f8f7;color:#7a929f;font-size:9px;font-weight:900}.task.done{border-color:#b7e7e2;background:#f3fbfa}.task.done .task-state{color:#245f80;background:#dff0f5}.outcomes{display:grid;grid-template-columns:1fr 1fr;gap:12px}.outcome{padding:16px;border:1px solid var(--line);border-radius:4px;background:white}.outcome.hit{border-top:4px solid var(--teal)}.outcome.miss{border-top:4px solid var(--coral)}.outcome h3{margin:8px 0;font-size:19px}.outcome p{color:#426176;font-size:11px;line-height:1.5}.presenter-flow{margin-top:24px;padding-top:19px;border-top:1px solid var(--line)}.presenter-flow[hidden]{display:none}.beat-panel{margin-top:10px;padding:16px;border:1px solid var(--line);border-radius:4px;background:white}.beat-panel h3{margin:6px 0}.beat-actions{display:flex;justify-content:flex-end;margin-top:12px}
-  @media(max-width:900px){.demo-grid,.voice-layout{grid-template-columns:1fr}}@media(max-width:700px){.demo-metrics{grid-template-columns:1fr}.outcomes{grid-template-columns:1fr}.switch{flex-wrap:wrap}}
-  `;
-  document.head.append(style);
-  main.innerHTML = `
-    <div class="heading"><div><small>COMMUNITY WATER WATCH / <span>22 SEP 2026</span></small><h2 id="screen-title">EYES — Satellite evidence</h2></div><div class="heading-actions"><span>Source <b id="source">offline demo records</b></span><button id="demo-run" class="btn accent" type="button">START 8-BEAT DEMO</button></div></div>
-    <section class="view visible" data-panel="eyes"><p class="demo-intro">A local Sentinel-2-style view of Demo Lake. Toggle the same inline lake scene between natural color and infrared / false color. Turbidity and bloom readings are screening signals, not a lab result.</p><div class="demo-grid"><article class="demo-card"><small class="kicker">01 / SATELLITE WATER-COLOR</small><h3>Demo Lake · fresh acquisition</h3><div id="scene" class="scene"><svg viewBox="0 0 800 340" role="img" aria-label="Inline Sentinel-2-style lake scene with shoreline and bloom patches"><g class="natural-scene"><rect width="800" height="340" fill="#c8d4b3"/><path d="M0 0h800v77c-90 28-130 8-210 32s-130 8-218 42-145 1-220 45L0 185Z" fill="#a6bd91"/><path d="M0 257c98-28 156 19 252-4s141-35 218-11 127 7 202-17 92-4 128 17v98H0Z" fill="#97ad7e"/><path d="M105 153c67-48 135-57 205-43 55 11 87 38 158 31 76-7 111-37 174-14 40 14 51 39 39 67-13 31-55 43-91 62-52 27-94 46-153 37-49-8-83-28-139-17-66 13-111 2-159-22-49-24-77-69-34-101Z" fill="#4c9eaa" stroke="#eef3e2" stroke-width="8"/><path d="M180 164c43-27 78-36 117-24 31 10 48 29 85 19 29-8 42 14 21 32-25 21-60 16-79 39-22 25-64 19-94 3-25-13-57-12-76-32-13-14 7-27 26-37Z" fill="#83bca7"/><path d="M445 191c31-22 65-20 90-6 23 13 15 34-8 43-31 11-58 0-75-13-13-10-22-15-7-24Z" fill="#79b995"/><path d="M228 149c19-13 39-13 52-4 10 7 4 16-10 22-18 8-44-5-42-18ZM476 178c18-12 32-8 38 1 5 9-8 17-22 19-18 1-29-11-16-20Z" fill="#cf7959"/><g fill="#647d55"><circle cx="82" cy="93" r="9"/><circle cx="112" cy="105" r="7"/><circle cx="674" cy="89" r="10"/><circle cx="700" cy="105" r="7"/><circle cx="333" cy="282" r="9"/><circle cx="362" cy="295" r="7"/></g><text x="22" y="29" fill="#34483b" font-size="13" font-family="sans-serif" font-weight="700">NATURAL COLOR · ILLUSTRATIVE</text></g><g class="false-scene"><rect width="800" height="340" fill="#312a63"/><path d="M0 0h800v77c-90 28-130 8-210 32s-130 8-218 42-145 1-220 45L0 185Z" fill="#b04f9c"/><path d="M0 257c98-28 156 19 252-4s141-35 218-11 127 7 202-17 92-4 128 17v98H0Z" fill="#db8d4b"/><path d="M105 153c67-48 135-57 205-43 55 11 87 38 158 31 76-7 111-37 174-14 40 14 51 39 39 67-13 31-55 43-91 62-52 27-94 46-153 37-49-8-83-28-139-17-66 13-111 2-159-22-49-24-77-69-34-101Z" fill="#19aeb3" stroke="#ddf5c6" stroke-width="8"/><path d="M180 164c43-27 78-36 117-24 31 10 48 29 85 19 29-8 42 14 21 32-25 21-60 16-79 39-22 25-64 19-94 3-25-13-57-12-76-32-13-14 7-27 26-37Z" fill="#7ee08b"/><path d="M445 191c31-22 65-20 90-6 23 13 15 34-8 43-31 11-58 0-75-13-13-10-22-15-7-24Z" fill="#97ed70"/><path d="M228 149c19-13 39-13 52-4 10 7 4 16-10 22-18 8-44-5-42-18ZM476 178c18-12 32-8 38 1 5 9-8 17-22 19-18 1-29-11-16-20Z" fill="#ff4e61"/><g fill="#54cf78"><circle cx="82" cy="93" r="9"/><circle cx="112" cy="105" r="7"/><circle cx="674" cy="89" r="10"/><circle cx="700" cy="105" r="7"/><circle cx="333" cy="282" r="9"/><circle cx="362" cy="295" r="7"/></g><text x="22" y="29" fill="#fff" font-size="13" font-family="sans-serif" font-weight="700">FALSE COLOR · SENTINEL-2 STYLE</text></g></svg><span id="scene-cap" class="scene-cap">NATURAL COLOR</span></div><div class="switch" role="group" aria-label="Satellite color mode"><button data-mode="natural" aria-pressed="true" type="button">Natural color</button><button data-mode="false" aria-pressed="false" type="button">Infrared / false color</button></div></article><aside class="demo-card"><small class="kicker">SCREENING READOUT</small><h3>Water-color signals</h3><p>False-color response highlights a localized bloom-like anomaly. Synthetic demo readings.</p><ul class="demo-list"><li><span>Turbidity</span><b>69.3 NTU · elevated</b></li><li><span>Chlorophyll-a</span><b>60.5 µg/L · elevated</b></li><li><span>Water mask</span><b>100% coverage</b></li><li><span>Acquired</span><b>22 Sep 2026</b></li></ul><div class="demo-note"><b>Screening only.</b> Satellite color cannot confirm contamination; field sampling and lab testing are required.</div></aside></div></section>
-    <section class="view" data-panel="brain" hidden><p class="demo-intro">The dashboard combines satellite evidence, cholera history and rainfall. Risk prioritizes investigation; it is not a diagnosis or causal claim.</p><div class="demo-grid"><article class="demo-card"><small class="kicker">02 / RISK DASHBOARD</small><h3>Risk rises before cases</h3><div class="demo-metrics"><div class="demo-metric"><small>DISTRICT RISK</small><strong>0.82</strong><span>High · rising from 0.61</span></div><div class="demo-metric"><small>SATELLITE</small><strong>0.74</strong><span>Red-edge anomaly</span></div><div class="demo-metric"><small>RAINFALL · 7D</small><strong>78 mm</strong><span>Catchment wetness</span></div></div><ul class="demo-list"><li><span>Satellite signal</span><b>Red-edge bloom / turbidity</b></li><li><span>Cholera history</span><b>2 linked cases · 90 days</b></li><li><span>Rainfall</span><b>78 mm in 7 days</b></li><li><span>Data confidence</span><b>87.5% · cloud adjusted</b></li></ul></article><aside class="demo-card"><span class="gate">FIELD SAMPLE REQUIRED</span><h3>Evidence gate</h3><p>Hold escalation until a source sample is collected and confirmed. Verify source and community reports with local health authorities.</p><div class="demo-note">The model highlights where to investigate; it does not establish contamination or cause.</div></aside></div></section>
-    <section class="view" data-panel="network" hidden><p class="demo-intro">Follow the water-point dependency graph and route collection to a verified-safe alternative while the flagged source is sampled.</p><div class="demo-grid"><article class="demo-card"><small class="kicker">03 / WATER-POINT DEPENDENCY GRAPH</small><h3>Khaoleya source and downstream communities</h3><div class="map"><svg viewBox="0 0 720 300" role="img" aria-label="Flagged Khaoleya borehole connects to communities; Chisomo borehole is highlighted as a safe alternative"><path d="M360 70V135M360 135H120v50M360 135v50m0-50h240v50M120 238v30h160" fill="none" stroke="#84989a" stroke-width="3" stroke-dasharray="7 5"/><path d="M120 238v30h160" fill="none" stroke="#16c1b7" stroke-width="5"/><rect x="245" y="20" width="230" height="58" rx="7" fill="#fff0ed" stroke="#f05d5e" stroke-width="3"/><text x="267" y="45" fill="#081a2b" font-size="14" font-weight="700">Khaoleya borehole 4</text><text x="267" y="64" fill="#a73a3b" font-size="10" font-weight="700">FLAGGED · SAMPLE REQUIRED</text><rect x="35" y="185" width="170" height="58" rx="7" fill="#f3fbfa" stroke="#16c1b7" stroke-width="4"/><text x="50" y="209" fill="#081a2b" font-size="12" font-weight="700">Chisomo borehole</text><text x="50" y="228" fill="#078f89" font-size="10" font-weight="700">SAFE · 2 km</text><rect x="275" y="185" width="170" height="58" rx="7" fill="#fff" stroke="#d6e2e0" stroke-width="2"/><text x="310" y="209" fill="#081a2b" font-size="13" font-weight="700">Chisomo</text><text x="310" y="228" fill="#426176" font-size="10">Affected settlement</text><rect x="515" y="185" width="170" height="58" rx="7" fill="#fff" stroke="#d6e2e0" stroke-width="2"/><text x="570" y="209" fill="#081a2b" font-size="13" font-weight="700">Matope</text><text x="570" y="228" fill="#426176" font-size="10">Affected settlement</text><text x="250" y="291" fill="#078f89" font-size="11" font-weight="700">REROUTE COLLECTION TO VERIFIED-SAFE SOURCE</text></svg></div><div class="map-legend"><span>● Flagged source</span><span style="color:#078f89">● Safe alternative</span><span style="color:#367ca7">● Community</span></div></article><aside class="demo-card"><small class="kicker">RANKED ALTERNATIVES</small><h3>Route to a verified source</h3><div class="alt"><b>1. Chisomo borehole · 2 km</b>VERIFIED-SAFE · registry match and recent clean sample.</div><div class="alt"><b>2. Matope protected spring · 4 km</b>VERIFIED-SAFE · two clean visits; use while source is sampled.</div><div class="demo-note">Keep drinking-water collection away from the flagged borehole until verification.</div></aside></div></section>
-    <section class="view" data-panel="voice" hidden><p class="demo-intro">A cautious water-watch alert in three languages. This is an offline SMS mockup; nothing is sent.</p><div class="voice-layout"><article class="demo-card"><small class="kicker">04 / COMMUNITY ALERT</small><h3>VOICE — SMS alert mockup</h3><div class="voice-panels"><div class="language"><small>CHICHEWA · SMS</small><b>CHENJEZO LA MADZI · DEMO LAKE</b><p>Madzi a pa Demo Lake akuganiziridwa kuti angaipitsidwe. Musamwe madzi osawiritsa kapena kusamba m’nyanjayi. Gwiritsani ntchito gwero lotsimikizika kuti ndi lotetezeka. Dikirani zotsatira za mayeso a m'munda.</p></div><div class="language"><small>ENGLISH · SMS</small><b>DEMO LAKE WATER WATCH</b><p>A possible harmful-algal-bloom signal has been detected. Do not drink untreated lake water or swim here. Use a verified-safe source while a field sample is checked. Wait for local health or water authority confirmation.</p></div><div class="language"><small>KISWAHILI · SMS</small><b>TAHADHARI YA MAJI · DEMO LAKE</b><p>Ishara inayowezekana ya mwani hatari imeonekana. Usinywe maji ya ziwa ambayo hayajatibiwa, wala usiogelee hapa. Tumia chanzo kilichothibitishwa kuwa salama wakati sampuli inapimwa. Subiri uthibitisho kutoka kwa mamlaka za afya au maji.</p></div></div></article><aside class="phone-wrap"><div class="phone" role="img" aria-label="Phone displaying water alert"><div class="phone-screen"><div class="notch"></div><small>09:41 &nbsp; ● ● ●</small><div class="sms"><b>Water Watch · Demo Lake</b>A possible harmful-algal-bloom signal has been detected. Do not drink untreated water or swim here. Use a verified-safe source. Field sample confirmation is required.<br><br>Local demo · SMS preview</div></div></div></aside></div></section>
-    <section class="view" data-panel="hands" hidden><p class="demo-intro">Field response queue. Click a checkbox to move each task from pending to done; the demonstration state is local to this page.</p><article class="demo-card"><small class="kicker">05 / FIELD WORKER TASKS</small><h3>Response checklist · Khaoleya catchment</h3><ul class="tasks"><li class="task"><input id="task-reroute" type="checkbox"><label for="task-reroute">Reroute water collection<small>Guide households to Chisomo borehole (verified-safe, 2 km).</small></label><span class="task-state">PENDING</span></li><li class="task"><input id="task-pump" type="checkbox"><label for="task-pump">Flag pump and post water notice<small>Mark Khaoleya borehole 4 as do-not-use pending verification.</small></label><span class="task-state">PENDING</span></li><li class="task"><input id="task-sample" type="checkbox"><label for="task-sample">Collect and label field sample<small>Record time, source ID and chain-of-custody for laboratory testing.</small></label><span class="task-state">PENDING</span></li></ul></article></section>
-    <section class="view" data-panel="verify" hidden><p class="demo-intro">Close the loop with the lab outcome. Both sample outcomes are shown as separate demonstration cards; HIT records the early warning lead time.</p><div class="outcomes"><article class="outcome hit"><small class="kicker">LAB RESULT · CONFIRMED</small><h3>Contamination confirmed</h3><p>Demo lab result for the suspect source. This synthetic card represents confirmation after field sampling.</p><ul class="demo-list"><li><span>Source</span><b>Khaoleya borehole 4</b></li><li><span>Result</span><b>Contamination confirmed</b></li><li><span>Action</span><b>Keep source flagged</b></li></ul></article><article class="outcome hit"><small class="kicker">FOLLOWING WEEKS · OUTCOME</small><h3>HIT · lead time 3 weeks</h3><p>Observed outcome matched the warning early enough for community action.</p><div class="demo-note">Verified HIT and three-week lead time are recorded for feedback into future risk scoring.</div></article><article class="outcome miss"><small class="kicker">ALTERNATE OUTCOME CARD</small><h3>MISS · no confirmation</h3><p>In a separate possible outcome, the sample does not confirm contamination. Record the miss, review evidence quality and update the model without treating a screening signal as a diagnosis.</p></article><article class="outcome"><small class="kicker">LABORATORY RECORD</small><h3>Confirmation is human-led</h3><p>Satellite and risk signals remain screening evidence until a collected sample has a laboratory result.</p></article></div></section>
-    <section id="presenter-flow" class="presenter-flow" hidden aria-live="polite"><div class="presenter-head"><div><small class="kicker">PRESENTER MODE / 8-BEAT SCRIPT</small><h3>From evidence to verified action</h3></div><span id="beat-count" class="beat-count">BEAT 1 / 8</span></div><div id="beat-panel" class="beat-panel"><small class="kicker">READY</small><h3>Six screens work independently</h3><p class="demo-intro">Start the presenter run, or explore any screen directly from the sidebar.</p></div><div class="beat-actions"><button id="next-beat" class="btn accent" type="button">Next beat →</button></div></section>`;
-  const titles={eyes:'EYES — Satellite evidence',brain:'BRAIN — Risk dashboard',network:'NETWORK — Water-point graph',voice:'VOICE — Multilingual SMS alert',hands:'HANDS — Field response tasks',verify:'VERIFY — Lab result and outcomes'};
-  function selectView(id){document.querySelectorAll('.sidebar .nav').forEach(b=>{const on=b.dataset.view===id;b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});document.querySelectorAll('[data-panel]').forEach(p=>{const on=p.dataset.panel===id;p.classList.toggle('visible',on);p.hidden=!on});$('#screen-title').textContent=titles[id]||titles.eyes}
-  document.querySelectorAll('.sidebar .nav').forEach(b=>b.addEventListener('click',()=>selectView(b.dataset.view)));
-  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{const mode=b.dataset.mode,scene=$('#scene'),falseColor=mode==='false';scene.classList.toggle('false',falseColor);scene.dataset.mode=mode;$('#scene-cap').textContent=falseColor?'INFRARED / FALSE COLOR':'NATURAL COLOR';document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))}));
-  document.querySelectorAll('.task input').forEach(box=>box.addEventListener('change',()=>{const row=box.closest('.task');row.classList.toggle('done',box.checked);$('.task-state',row).textContent=box.checked?'DONE':'PENDING'}));
-  const beats=[['eyes','Open with the satellite evidence','The inline scene toggles between natural and Sentinel-2-style false color. It is screening evidence, not a lab result.'],['brain','Show the risk dashboard','Satellite signal, two historical cases and rainfall combine; the field sample gate remains visible.'],['network','Trace the water-point network','Khaoleya is flagged; Chisomo borehole is the nearest highlighted safe alternative.'],['voice','Reach people in their languages','Show the Chichewa, English and Kiswahili SMS previews on the phone mockup.'],['hands','Move field work forward','Reroute collection, flag the pump and collect a sample. Each task can be checked off.'],['verify','Close the loop with the lab','Contamination is confirmed in the synthetic lab card; the HIT records three weeks of lead time.'],['verify','Review the alternate MISS','A miss outcome is shown separately, so screening is never presented as confirmation.'],['eyes','Return to evidence','The presenter run ends; every screen remains directly available in the sidebar.']];
-  let beat=0,started=false;
-  function showBeat(){const [id,title,copy]=beats[beat];selectView(id);$('#presenter-flow').hidden=false;$('#beat-count').textContent=`BEAT ${beat+1} / 8`;$('#beat-panel').innerHTML=`<small class="kicker">${menu.find(x=>x[0]===id)[1]}</small><h3>${title}</h3><p class="demo-intro">${copy}</p>`;$('#next-beat').textContent=beat===7?'Restart demo ↻':'Next beat →'}
-  $('#demo-run').addEventListener('click',()=>{beat=0;started=true;showBeat();$('#demo-run').textContent='RESTART 8-BEAT DEMO'});
-  $('#next-beat').addEventListener('click',()=>{if(!started){started=true;beat=0}else beat=(beat+1)%beats.length;showBeat()});
-  $('#help').addEventListener('click',()=>{const t=$('#toast');if(t){t.textContent='Choose EYES, BRAIN, NETWORK, VOICE, HANDS or VERIFY from the sidebar. Presenter mode is optional.';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200)}});
-  $('#language').addEventListener('click',()=>{const t=$('#toast');if(t){t.textContent='SMS examples are displayed in Chichewa, English and Kiswahili.';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}});
-  selectView('eyes');
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const toast = (message) => {
+    const el = $('#toast');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => el.classList.remove('show'), 2400);
+  };
+  const titles = { overview: 'Lake Malawi at a glance', signal: 'Water signal, unpacked', network: 'Network alert propagation', health: 'Water signal to human action' };
+
+  function wireNavigation() {
+    $$('.nav').forEach(button => button.addEventListener('click', () => {
+      const view = button.dataset.view;
+      $$('.nav').forEach(item => item.classList.toggle('active', item === button));
+      $$('[data-panel]').forEach(panel => {
+        const active = panel.dataset.panel === view;
+        panel.classList.toggle('visible', active);
+        panel.hidden = !active;
+      });
+      const heading = $('#title');
+      if (heading) heading.textContent = titles[view] || titles.overview;
+    }));
+  }
+
+  function wireSatelliteToggle() {
+    const image = $('img[src*="satellite-demo"], .satellite img, .map img');
+    if (!image) return;
+    const frame = image.closest('.satellite, .card') || image.parentElement;
+    const controls = document.createElement('div');
+    controls.className = 'local-scene-toggle';
+    controls.setAttribute('role', 'group');
+    controls.setAttribute('aria-label', 'Local satellite image mode');
+    controls.style.cssText = 'display:flex;gap:8px;margin:10px 0;flex-wrap:wrap';
+    const modes = [
+      ['natural', 'Natural color', 'assets/satellite-natural.png', 'assets/satellite-natural.svg'],
+      ['ir', 'Infrared / false color', 'assets/satellite-ir.png', 'assets/satellite-ir.svg']
+    ];
+    const select = (mode, button) => {
+      const [, label, png, fallback] = mode;
+      image.onerror = () => { image.onerror = null; image.src = fallback; };
+      image.src = png;
+      image.alt = `${label} local illustration of Lake Malawi near Salima`;
+      controls.querySelectorAll('button').forEach(item => {
+        const active = item === button;
+        item.setAttribute('aria-pressed', String(active));
+        item.style.cssText = `border:1px solid #b7e7e2;border-radius:4px;padding:8px 10px;cursor:pointer;font-weight:700;background:${active ? '#081a2b' : '#edf3f3'};color:${active ? '#fff' : '#426176'}`;
+      });
+    };
+    modes.forEach(mode => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = mode[1];
+      button.addEventListener('click', () => select(mode, button));
+      controls.append(button);
+    });
+    frame.insertAdjacentElement('afterend', controls);
+    const caption = document.createElement('p');
+    caption.className = 'local-place-label';
+    caption.textContent = 'Lake Malawi · Salima District, Malawi — illustrative, offline scene';
+    caption.style.cssText = 'margin:6px 0;color:#426176;font-size:12px';
+    controls.insertAdjacentElement('afterend', caption);
+    select(modes[0], controls.querySelector('button'));
+  }
+
+  function labelRealPlaces() {
+    const replacements = [['Demo Lake', 'Lake Malawi (Salima District)'], ['Khaoleya', 'Salima'], ['Chisomo', 'Nkhotakota'], ['Matope', 'Mangochi']];
+    const walk = () => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (!node.parentElement || /^(SCRIPT|STYLE)$/.test(node.parentElement.tagName)) continue;
+        let text = node.nodeValue;
+        replacements.forEach(([from, to]) => { text = text.replaceAll(from, to); });
+        if (text !== node.nodeValue) node.nodeValue = text;
+      }
+    };
+    walk();
+    new MutationObserver(walk).observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+
+  function addNetworkRiskMarkers() {
+    const svg = $('.network .map svg, [data-panel="network"] .map svg');
+    if (!svg || svg.querySelector('.offline-risk-markers')) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const group = document.createElementNS(ns, 'g');
+    group.setAttribute('class', 'offline-risk-markers');
+    group.setAttribute('aria-label', 'Red screening risk markers: Salima source and downstream locations');
+    [[360, 78, 'Salima · flagged source'], [120, 174, 'Nkhotakota · exposed'], [360, 174, 'Salima · exposed'], [600, 174, 'Mangochi · exposed']].forEach(([x, y, label]) => {
+      const marker = document.createElementNS(ns, 'circle');
+      marker.setAttribute('cx', x); marker.setAttribute('cy', y); marker.setAttribute('r', 8);
+      marker.setAttribute('fill', '#dc2626'); marker.setAttribute('stroke', '#fff'); marker.setAttribute('stroke-width', 3);
+      marker.setAttribute('aria-label', `Red risk marker: ${label}`);
+      group.append(marker);
+    });
+    svg.append(group);
+  }
+
+  function wireLocalControls() {
+    $('#refresh')?.addEventListener('click', () => toast('Offline demo is already current.'));
+    $('#help')?.addEventListener('click', () => toast('Choose a dashboard view, switch the local satellite image, or run the offline network preview.'));
+    $('#language')?.addEventListener('click', event => {
+      const button = event.currentTarget;
+      button.textContent = button.textContent.includes('SW') ? 'EN / SW' : 'SW / EN';
+      toast('Language control updated locally; no message was sent.');
+    });
+    $('#alert-action')?.addEventListener('click', () => toast('Use a verified-safe source and contact local authorities.'));
+    $('#share')?.addEventListener('click', () => toast('Local field note ready to share; nothing was sent.'));
+    $$('.task input[type="checkbox"]').forEach(box => box.addEventListener('change', () => {
+      const row = box.closest('.task');
+      row?.classList.toggle('done', box.checked);
+      const state = $('.task-state', row);
+      if (state) state.textContent = box.checked ? 'DONE' : 'PENDING';
+    }));
+    $('#network-demo')?.addEventListener('click', () => {
+      addNetworkRiskMarkers();
+      toast('Offline network preview: red screening markers shown; field sample still required.');
+    });
+    $('#demo-run')?.addEventListener('click', () => toast('Offline presenter controls are ready.'));
+    $('#next-beat')?.addEventListener('click', () => toast('Explore the next dashboard view from the sidebar.'));
+  }
+
+  function init() {
+    wireNavigation();
+    wireLocalControls();
+    labelRealPlaces();
+    wireSatelliteToggle();
+    addNetworkRiskMarkers();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+  else init();
 })();
